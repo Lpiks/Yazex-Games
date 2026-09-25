@@ -24,7 +24,7 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     
     // Player object
     player: {
-      x: 90,
+      x: 110,
       y: 280,
       width: 54,
       height: 54,
@@ -409,32 +409,34 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         }
 
         // --- COLLISION DETECTION (Strict AABB with ducking support) ---
-        const p = g.player;
-        const pWidth = p.width - 10;
-        const pHeight = p.isDucking ? 28 : (p.height - 8);
-        const pX = p.x + 5;
-        const pY = p.y + 4;
+        if (g.running) {
+          const p = g.player;
+          const pWidth = p.width - 10;
+          const pHeight = p.isDucking ? 28 : (p.height - 8);
+          const pX = p.x + 5;
+          const pY = p.y + 4;
 
-        if (
-          pX < obs.x + obs.width &&
-          pX + pWidth > obs.x &&
-          pY < obs.y + obs.height &&
-          pY + pHeight > obs.y
-        ) {
-          // HIT! GAME OVER!
-          g.running = false;
-          const finalScore = Math.floor(g.distance / 6);
-          setGameState('gameover');
-          // Update high score
-          setHighScores(prev => {
-            const newBest = Math.max(prev.runner || 0, finalScore);
-            return { ...prev, runner: newBest };
-          });
-          // Update player coins
-          setPlayerData(prev => ({
-            ...prev,
-            coins: prev.coins + g.coinsCollected
-          }));
+          if (
+            pX < obs.x + obs.width &&
+            pX + pWidth > obs.x &&
+            pY < obs.y + obs.height &&
+            pY + pHeight > obs.y
+          ) {
+            // HIT! GAME OVER!
+            g.running = false;
+            const finalScore = Math.floor(g.distance / 6);
+            setGameState('gameover');
+            // Update high score
+            setHighScores(prev => {
+              const newBest = Math.max(prev.runner || 0, finalScore);
+              return { ...prev, runner: newBest };
+            });
+            // Update player coins
+            setPlayerData(prev => ({
+              ...prev,
+              coins: prev.coins + g.coinsCollected
+            }));
+          }
         }
 
         // Remove off-screen obstacles
@@ -469,14 +471,16 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         ctx.restore();
 
         // Coin collection check
-        const p = g.player;
-        const dist = Math.hypot(p.x + p.width / 2 - c.x, p.y + p.height / 2 - c.y);
-        if (dist < c.radius + 24) {
-          g.coinsCollected += 1;
-          setCoins(g.coinsCollected);
-          createParticles(c.x, c.y, '#FFD700', 8, 1);
-          g.coinsList.splice(i, 1);
-          continue;
+        if (g.running) {
+          const p = g.player;
+          const dist = Math.hypot(p.x + p.width / 2 - c.x, p.y + p.height / 2 - c.y);
+          if (dist < c.radius + 24) {
+            g.coinsCollected += 1;
+            setCoins(g.coinsCollected);
+            createParticles(c.x, c.y, '#FFD700', 8, 1);
+            g.coinsList.splice(i, 1);
+            continue;
+          }
         }
 
         if (c.x < -30) {
@@ -519,18 +523,30 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         ctx.rotate(Math.sin(Date.now() / 80) * 0.06);
       }
 
-      if (g.logoImg) {
+      // Player Base Badge & Border (Guaranteed 100% visible)
+      ctx.beginPath();
+      ctx.arc(0, 0, 26, 0, Math.PI * 2);
+      ctx.fillStyle = '#1A1A1B';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#C5A367';
+      ctx.stroke();
+
+      if (g.logoImg && g.logoImg.complete && g.logoImg.naturalWidth > 0) {
         // Draw the official circular pirate logo as character sprite
-        ctx.beginPath();
-        ctx.arc(0, 0, 26, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(g.logoImg, -26, -26, 52, 52);
-      } else {
-        // Procedural pirate fallback
-        ctx.fillStyle = '#C5A367';
+        ctx.save();
         ctx.beginPath();
         ctx.arc(0, 0, 24, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.clip();
+        ctx.drawImage(g.logoImg, -24, -24, 48, 48);
+        ctx.restore();
+      } else {
+        // Procedural pirate fallback (Skull & Crossbones)
+        ctx.fillStyle = '#C5A367';
+        ctx.font = 'bold 22px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('☠️', 0, 2);
       }
 
       ctx.restore();
@@ -575,23 +591,23 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
       <div className="relative rounded-2xl overflow-hidden border-2 border-pirate-gold/40 shadow-2xl bg-black select-none">
         
         {/* HUD Overlay (Score & Coins) */}
-        <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-          <div className="bg-black/75 backdrop-blur-md border border-pirate-gold/40 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl flex items-center gap-2 sm:gap-4">
-            <div className="font-heading text-lg sm:text-2xl text-white tracking-widest">
+        <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 z-20 flex items-center justify-between pointer-events-none">
+          <div className="bg-black/80 backdrop-blur-md border border-pirate-gold/40 px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl flex items-center gap-2 sm:gap-4">
+            <div className="font-heading text-xs sm:text-2xl text-white tracking-widest">
               SCORE : <span className="text-pirate-gold font-bold">{score}</span>
             </div>
-            <div className="w-px h-4 sm:h-5 bg-pirate-gold/30" />
-            <div className="font-heading text-base sm:text-xl text-yellow-400 tracking-wider flex items-center gap-1">
+            <div className="w-px h-3.5 sm:h-5 bg-pirate-gold/30" />
+            <div className="font-heading text-xs sm:text-xl text-yellow-400 tracking-wider flex items-center gap-1">
               <span>🪙</span> {coins}
             </div>
           </div>
 
           {/* Reward Goal Progress Bar */}
-          <div className="bg-black/75 backdrop-blur-md border border-pirate-gold/40 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-right">
-            <span className="text-[10px] sm:text-[11px] font-mono text-gray-300 block">
+          <div className="bg-black/80 backdrop-blur-md border border-pirate-gold/40 px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-right">
+            <span className="text-[9px] sm:text-[11px] font-mono text-gray-300 block">
               {score >= 500 ? "🎉 PROMO DÉVERROUILLÉ !" : `Objectif : ${score}/500 pts`}
             </span>
-            <div className="w-24 sm:w-36 h-1.5 sm:h-2 bg-gray-800 rounded-full overflow-hidden mt-0.5">
+            <div className="w-20 sm:w-36 h-1.5 sm:h-2 bg-gray-800 rounded-full overflow-hidden mt-0.5">
               <div 
                 className="h-full bg-gradient-to-r from-red-600 to-yellow-500 transition-all duration-300"
                 style={{ width: `${Math.min((score / 500) * 100, 100)}%` }}
@@ -600,12 +616,12 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
           </div>
         </div>
 
-        {/* The 2.5D Canvas Component (Taller on mobile for better visibility) */}
+        {/* The 2.5D Canvas Component (Fully responsive, aspect-ratio locked, zero horizontal cropping) */}
         <canvas
           ref={canvasRef}
           width={1000}
           height={450}
-          className="w-full h-[260px] sm:h-[350px] md:h-auto md:aspect-[10/4.5] block cursor-pointer object-cover"
+          className="w-full h-auto aspect-[1000/450] block cursor-pointer bg-black"
           onClick={() => {
             if (gameState === 'start' || gameState === 'gameover') startGame();
             else handleJump();
@@ -614,25 +630,25 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
 
         {/* Start Game Overlay */}
         {gameState === 'start' && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-4 text-center space-y-4 animate-fadeIn">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-pirate-gold shadow-fumi-glow flex items-center justify-center bg-red-600/20">
-              <Play size={32} className="text-pirate-gold translate-x-1 sm:w-10 sm:h-10" fill="currentColor" />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-3 sm:p-4 text-center space-y-2 sm:space-y-4 animate-fadeIn">
+            <div className="w-10 h-10 sm:w-20 sm:h-20 rounded-full border-2 sm:border-4 border-pirate-gold shadow-fumi-glow flex items-center justify-center bg-red-600/20">
+              <Play size={20} className="text-pirate-gold translate-x-0.5 sm:w-10 sm:h-10 sm:translate-x-1" fill="currentColor" />
             </div>
-            <div className="space-y-1">
-              <h2 className="font-heading text-3xl sm:text-5xl text-white tracking-wider">
+            <div className="space-y-0.5 sm:space-y-1">
+              <h2 className="font-heading text-lg sm:text-5xl text-white tracking-wider">
                 YAZEX ULTRAS RUNNER
               </h2>
-              <p className="text-gray-300 text-xs sm:text-sm max-w-xs sm:max-w-md font-body">
+              <p className="hidden sm:block text-gray-300 text-xs sm:text-sm max-w-xs sm:max-w-md font-body">
                 Saute par-dessus les <strong>Fumigènes</strong>, glisse sous les <strong>Signaux</strong> et esquive la <strong>Police</strong>.
               </p>
             </div>
             <button
               onClick={startGame}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-base sm:text-xl tracking-wider px-6 py-3 sm:px-8 sm:py-4 rounded-xl shadow-fumi-glow font-bold uppercase transition-transform hover:scale-105 active:scale-95"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-xs sm:text-xl tracking-wider px-4 py-2 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl shadow-fumi-glow font-bold uppercase transition-transform hover:scale-105 active:scale-95"
             >
               TOUCHER POUR JOUER
             </button>
-            <p className="text-[11px] sm:text-xs text-gray-400 font-mono">
+            <p className="text-[10px] sm:text-xs text-gray-400 font-mono">
               [TAP / ESPACE] Sauter &nbsp;•&nbsp; [BOUTON BAS] Glisser
             </p>
           </div>
@@ -640,41 +656,42 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
 
         {/* Game Over Overlay */}
         {gameState === 'gameover' && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center space-y-6 animate-fadeIn">
-            <div className="space-y-1">
-              <span className="text-red-500 font-heading text-xl tracking-widest block uppercase animate-pulse">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-3 sm:p-6 text-center space-y-2 sm:space-y-6 animate-fadeIn">
+            <div className="space-y-0.5 sm:space-y-1">
+              <span className="text-red-500 font-heading text-xs sm:text-xl tracking-widest block uppercase animate-pulse">
                 KABSA ! INTERCEPTION DU VIRAGE
               </span>
-              <h2 className="font-heading text-5xl text-white tracking-wider">
+              <h2 className="font-heading text-2xl sm:text-5xl text-white tracking-wider">
                 GAME OVER
               </h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-6 bg-pirate-dark/80 border border-pirate-gold/30 p-5 rounded-2xl w-full max-w-xs shadow-xl">
+            <div className="flex items-center justify-center gap-6 sm:grid sm:grid-cols-2 sm:gap-6 bg-pirate-dark/80 border border-pirate-gold/30 px-4 py-1.5 sm:p-5 rounded-xl sm:rounded-2xl w-auto sm:w-full max-w-xs shadow-xl">
               <div>
-                <span className="text-xs text-gray-400 uppercase font-mono block">Score</span>
-                <span className="font-heading text-3xl text-pirate-gold font-bold">{score}</span>
+                <span className="text-[10px] sm:text-xs text-gray-400 uppercase font-mono block">Score</span>
+                <span className="font-heading text-xl sm:text-3xl text-pirate-gold font-bold">{score}</span>
               </div>
+              <div className="w-px h-6 bg-pirate-gold/30 sm:hidden" />
               <div>
-                <span className="text-xs text-gray-400 uppercase font-mono block">Pièces</span>
-                <span className="font-heading text-3xl text-yellow-400 font-bold">+{coins}</span>
+                <span className="text-[10px] sm:text-xs text-gray-400 uppercase font-mono block">Pièces</span>
+                <span className="font-heading text-xl sm:text-3xl text-yellow-400 font-bold">+{coins}</span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
               <button
                 onClick={startGame}
-                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-heading text-lg tracking-wider px-7 py-3 rounded-xl shadow-fumi-glow font-bold uppercase transition-all hover:scale-105"
+                className="inline-flex items-center gap-1.5 sm:gap-2 bg-red-600 hover:bg-red-700 text-white font-heading text-xs sm:text-lg tracking-wider px-4 py-2 sm:px-7 sm:py-3 rounded-xl shadow-fumi-glow font-bold uppercase transition-all hover:scale-105"
               >
-                <RotateCcw size={18} /> REJOUER
+                <RotateCcw size={15} /> REJOUER
               </button>
               
               {score >= 500 && (
                 <button
                   onClick={() => onRewardUnlocked('YAZEX500', '-10% SUR YAZEX SHIP', 'PIRATE ULTRAS DÉVERROUILLÉ !')}
-                  className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-heading text-lg tracking-wider px-6 py-3 rounded-xl shadow-gold-glow font-bold uppercase transition-all"
+                  className="inline-flex items-center gap-1.5 sm:gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-heading text-xs sm:text-lg tracking-wider px-4 py-2 sm:px-6 sm:py-3 rounded-xl shadow-gold-glow font-bold uppercase transition-all"
                 >
-                  <Award size={18} /> RÉCLAMER LE CODE PROMO
+                  <Award size={15} /> CODE PROMO
                 </button>
               )}
             </div>
