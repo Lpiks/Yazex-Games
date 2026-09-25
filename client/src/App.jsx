@@ -112,7 +112,7 @@ export default function App() {
       />
 
       {/* Main View Router */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 pt-3 sm:pt-8 pb-20 md:pb-8 w-full">
         {currentView === 'lobby' && (
           <Lobby
             setCurrentView={setCurrentView}
@@ -161,7 +161,7 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-pirate-gold/20 bg-black/90 py-8 text-center text-xs text-gray-500 font-mono mt-12">
+      <footer className="border-t border-pirate-gold/20 bg-black/90 py-6 sm:py-8 text-center text-xs text-gray-500 font-mono mt-8 pb-20 md:pb-8">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>
             🏴‍☠️ © 2026 <strong>YAZEX ARCADE</strong> • Conçu avec passion pour la culture des virages algériens.

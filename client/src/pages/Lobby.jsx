@@ -3,38 +3,38 @@ import { Play, Sparkles, Flame, Trophy, Users, ShieldAlert, Award, Star, ArrowRi
 
 export default function Lobby({ setCurrentView, playerData, highScores }) {
   return (
-    <div className="space-y-10 pb-16">
+    <div className="space-y-6 sm:space-y-10 pb-24 md:pb-16 px-1 sm:px-0">
       
       {/* Hero Welcome Banner */}
-      <section className="relative overflow-hidden rounded-3xl border-2 border-pirate-gold/40 bg-gradient-to-br from-pirate-dark via-[#141416] to-black p-8 sm:p-12 shadow-2xl">
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-pirate-gold/40 bg-gradient-to-br from-pirate-dark via-[#141416] to-black p-5 sm:p-12 shadow-2xl">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-pirate-gold/10 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-16 w-80 h-80 rounded-full bg-red-600/10 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-3xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pirate-gold/15 border border-pirate-gold/30 text-pirate-gold text-xs font-bold uppercase tracking-wider">
-            <Sparkles size={14} /> Saison 2026 : Virage & Piraterie Ouverte
+        <div className="relative z-10 max-w-3xl space-y-3 sm:space-y-4">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-pirate-gold/15 border border-pirate-gold/30 text-pirate-gold text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+            <Sparkles size={12} /> Saison 2026 : Virage Ouvert
           </div>
           
-          <h1 className="font-heading text-4xl sm:text-6xl text-white tracking-wide leading-none">
+          <h1 className="font-heading text-3xl sm:text-6xl text-white tracking-wide leading-none">
             BIENVENUE SUR <span className="text-pirate-gold text-glow-gold">YAZEX ARCADE</span>
           </h1>
           
-          <p className="text-gray-300 text-sm sm:text-base max-w-2xl font-body leading-relaxed">
+          <p className="text-gray-300 text-xs sm:text-base max-w-2xl font-body leading-relaxed">
             Le repaire gaming officiel des supporters et corsaires. Cours dans les ruelles du port en esquivant la police et les signaux, ou prends les commandes de la tribune pour concevoir le Tifo qui fera vibrer toute l'Algérie.
           </p>
 
-          <div className="flex flex-wrap items-center gap-4 pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
               onClick={() => setCurrentView('runner')}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-lg tracking-wider px-6 py-3 rounded-xl shadow-fumi-glow hover:scale-105 transition-all font-bold"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-sm sm:text-lg tracking-wider px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl shadow-fumi-glow hover:scale-105 transition-all font-bold"
             >
-              <Play size={18} fill="currentColor" /> LANCER ULTRAS RUNNER
+              <Play size={16} fill="currentColor" /> LANCER RUNNER
             </button>
             <button
               onClick={() => setCurrentView('tifo-studio')}
-              className="inline-flex items-center gap-2 bg-black/60 hover:bg-black/90 border border-pirate-gold text-pirate-gold font-heading text-lg tracking-wider px-6 py-3 rounded-xl hover:shadow-gold-glow transition-all font-bold"
+              className="inline-flex items-center gap-2 bg-black/60 hover:bg-black/90 border border-pirate-gold text-pirate-gold font-heading text-sm sm:text-lg tracking-wider px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl hover:shadow-gold-glow transition-all font-bold"
             >
-              <Sparkles size={18} /> OUVRIR TIFO STUDIO
+              <Sparkles size={16} /> TIFO STUDIO
             </button>
           </div>
         </div>

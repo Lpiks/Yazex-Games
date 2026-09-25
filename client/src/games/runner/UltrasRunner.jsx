@@ -544,29 +544,29 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
   }, [gameState, rewardTriggered, onRewardUnlocked, setHighScores, setPlayerData]);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className="space-y-4 max-w-5xl mx-auto pb-24 md:pb-12 px-1 sm:px-0">
       
       {/* Top Header & Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-1">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-pirate-gold hover:text-white font-heading text-sm tracking-wider transition-colors"
+          className="inline-flex items-center gap-1.5 text-pirate-gold hover:text-white font-heading text-xs sm:text-sm tracking-wider transition-colors"
         >
-          <ArrowLeft size={18} /> RETOUR AU LOBBY
+          <ArrowLeft size={16} /> LOBBY
         </button>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-black/60 border border-pirate-gold/30 px-3.5 py-1.5 rounded-lg text-xs font-mono">
-            <Trophy size={14} className="text-yellow-400" />
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 bg-black/60 border border-pirate-gold/30 px-2.5 sm:px-3.5 py-1 rounded-lg text-[11px] sm:text-xs font-mono">
+            <Trophy size={13} className="text-yellow-400" />
             <span>RECORD : <strong>{highScores.runner || 0} PTS</strong></span>
           </div>
 
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2 rounded-lg bg-black/60 border border-pirate-gold/30 text-pirate-gold hover:text-white transition-colors"
+            className="p-1.5 rounded-lg bg-black/60 border border-pirate-gold/30 text-pirate-gold hover:text-white transition-colors"
             title={soundEnabled ? "Couper le son" : "Activer le son"}
           >
-            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
           </button>
         </div>
       </div>
@@ -575,23 +575,23 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
       <div className="relative rounded-2xl overflow-hidden border-2 border-pirate-gold/40 shadow-2xl bg-black select-none">
         
         {/* HUD Overlay (Score & Coins) */}
-        <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-          <div className="bg-black/70 backdrop-blur-md border border-pirate-gold/40 px-4 py-2 rounded-xl flex items-center gap-4">
-            <div className="font-heading text-2xl text-white tracking-widest">
+        <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
+          <div className="bg-black/75 backdrop-blur-md border border-pirate-gold/40 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl flex items-center gap-2 sm:gap-4">
+            <div className="font-heading text-lg sm:text-2xl text-white tracking-widest">
               SCORE : <span className="text-pirate-gold font-bold">{score}</span>
             </div>
-            <div className="w-px h-5 bg-pirate-gold/30" />
-            <div className="font-heading text-xl text-yellow-400 tracking-wider flex items-center gap-1.5">
+            <div className="w-px h-4 sm:h-5 bg-pirate-gold/30" />
+            <div className="font-heading text-base sm:text-xl text-yellow-400 tracking-wider flex items-center gap-1">
               <span>🪙</span> {coins}
             </div>
           </div>
 
           {/* Reward Goal Progress Bar */}
-          <div className="bg-black/70 backdrop-blur-md border border-pirate-gold/40 px-4 py-2 rounded-xl text-right">
-            <span className="text-[11px] font-mono text-gray-300 block">
-              {score >= 500 ? "🎉 CODE PROMO DÉVERROUILLÉ !" : `Objectif Promo : ${score}/500 pts`}
+          <div className="bg-black/75 backdrop-blur-md border border-pirate-gold/40 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-right">
+            <span className="text-[10px] sm:text-[11px] font-mono text-gray-300 block">
+              {score >= 500 ? "🎉 PROMO DÉVERROUILLÉ !" : `Objectif : ${score}/500 pts`}
             </span>
-            <div className="w-36 h-2 bg-gray-800 rounded-full overflow-hidden mt-1">
+            <div className="w-24 sm:w-36 h-1.5 sm:h-2 bg-gray-800 rounded-full overflow-hidden mt-0.5">
               <div 
                 className="h-full bg-gradient-to-r from-red-600 to-yellow-500 transition-all duration-300"
                 style={{ width: `${Math.min((score / 500) * 100, 100)}%` }}
@@ -600,12 +600,12 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
           </div>
         </div>
 
-        {/* The 2.5D Canvas Component */}
+        {/* The 2.5D Canvas Component (Taller on mobile for better visibility) */}
         <canvas
           ref={canvasRef}
           width={1000}
           height={450}
-          className="w-full h-auto aspect-[10/4.5] block cursor-pointer"
+          className="w-full h-[260px] sm:h-[350px] md:h-auto md:aspect-[10/4.5] block cursor-pointer object-cover"
           onClick={() => {
             if (gameState === 'start' || gameState === 'gameover') startGame();
             else handleJump();
@@ -614,26 +614,26 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
 
         {/* Start Game Overlay */}
         {gameState === 'start' && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center space-y-5 animate-fadeIn">
-            <div className="w-20 h-20 rounded-full border-4 border-pirate-gold shadow-fumi-glow flex items-center justify-center bg-red-600/20">
-              <Play size={40} className="text-pirate-gold translate-x-1" fill="currentColor" />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-4 text-center space-y-4 animate-fadeIn">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-pirate-gold shadow-fumi-glow flex items-center justify-center bg-red-600/20">
+              <Play size={32} className="text-pirate-gold translate-x-1 sm:w-10 sm:h-10" fill="currentColor" />
             </div>
-            <div className="space-y-2">
-              <h2 className="font-heading text-4xl sm:text-5xl text-white tracking-wider">
+            <div className="space-y-1">
+              <h2 className="font-heading text-3xl sm:text-5xl text-white tracking-wider">
                 YAZEX ULTRAS RUNNER
               </h2>
-              <p className="text-gray-300 text-sm max-w-md font-body">
-                Saute par-dessus les <strong>Fumigènes</strong> au sol, glisse sous les <strong>Signaux</strong> aériens et esquive la <strong>Police</strong>.
+              <p className="text-gray-300 text-xs sm:text-sm max-w-xs sm:max-w-md font-body">
+                Saute par-dessus les <strong>Fumigènes</strong>, glisse sous les <strong>Signaux</strong> et esquive la <strong>Police</strong>.
               </p>
             </div>
             <button
               onClick={startGame}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-xl tracking-wider px-8 py-4 rounded-xl shadow-fumi-glow font-bold uppercase transition-transform hover:scale-105"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-base sm:text-xl tracking-wider px-6 py-3 sm:px-8 sm:py-4 rounded-xl shadow-fumi-glow font-bold uppercase transition-transform hover:scale-105 active:scale-95"
             >
-              APPUYE SUR ESPACE POUR JOUER
+              TOUCHER POUR JOUER
             </button>
-            <p className="text-xs text-gray-400 font-mono">
-              [ESPACE / ↑] Sauter &nbsp;•&nbsp; [↓ / S] Glisser / Duck
+            <p className="text-[11px] sm:text-xs text-gray-400 font-mono">
+              [TAP / ESPACE] Sauter &nbsp;•&nbsp; [BOUTON BAS] Glisser
             </p>
           </div>
         )}
