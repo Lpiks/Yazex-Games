@@ -1,7 +1,7 @@
 import React from 'react';
 import { Play, Sparkles, Flame, Trophy, Users, ShieldAlert, Award, Star, ArrowRight } from 'lucide-react';
 
-export default function Lobby({ setCurrentView, playerData, highScores }) {
+export default function Lobby({ setCurrentView, playerData, highScores, onOpenArmory }) {
   return (
     <div className="space-y-6 sm:space-y-10 pb-24 md:pb-16 px-1 sm:px-0">
       
@@ -26,15 +26,21 @@ export default function Lobby({ setCurrentView, playerData, highScores }) {
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
               onClick={() => setCurrentView('runner')}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-sm sm:text-lg tracking-wider px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl shadow-fumi-glow hover:scale-105 transition-all font-bold"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-sm sm:text-lg tracking-wider px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl shadow-fumi-glow hover:scale-105 transition-all font-bold cursor-pointer"
             >
               <Play size={16} fill="currentColor" /> LANCER RUNNER
             </button>
             <button
               onClick={() => setCurrentView('tifo-studio')}
-              className="inline-flex items-center gap-2 bg-black/60 hover:bg-black/90 border border-pirate-gold text-pirate-gold font-heading text-sm sm:text-lg tracking-wider px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl hover:shadow-gold-glow transition-all font-bold"
+              className="inline-flex items-center gap-2 bg-black/60 hover:bg-black/90 border border-pirate-gold text-pirate-gold font-heading text-sm sm:text-lg tracking-wider px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl hover:shadow-gold-glow transition-all font-bold cursor-pointer"
             >
               <Sparkles size={16} /> TIFO STUDIO
+            </button>
+            <button
+              onClick={onOpenArmory}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-pirate-gold/20 via-yellow-600/20 to-red-600/20 hover:from-pirate-gold/30 hover:to-yellow-600/30 border border-pirate-gold/70 text-pirate-gold hover:text-white font-heading text-sm sm:text-lg tracking-wider px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl shadow-gold-glow transition-all font-bold cursor-pointer"
+            >
+              <Flame size={16} className="text-red-500 animate-pulse" /> ARMURERIE DU VIRAGE
             </button>
           </div>
         </div>

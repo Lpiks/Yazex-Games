@@ -1,6 +1,54 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, Play, Upload, Palette, Layers, Film, RotateCcw, Send, Check, ArrowLeft, Sliders, Type } from 'lucide-react';
+import { Sparkles, Play, Upload, Palette, Layers, Film, RotateCcw, Send, Check, ArrowLeft, Sliders, Type, Flame, ShoppingCart } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { TIFO_PYRO_PACKS } from '../../components/ArmoryModal';
+
+export const PYRO_CONFIGS = {
+  red: {
+    name: 'Rouge Braise Alger',
+    spots: [{ x: 100, y: 360 }, { x: 220, y: 370 }, { x: 780, y: 370 }, { x: 900, y: 360 }],
+    colors: ['rgba(255, 69, 0, 0.85)', 'rgba(229, 62, 62, 0.45)'],
+    sparkColors: ['#FFEAA7', '#FF7675', '#FDCB6E'],
+    sparkCount: 6,
+    sparkHeight: 80
+  },
+  green: {
+    name: 'Vert Émeraude MCA',
+    spots: [{ x: 100, y: 360 }, { x: 220, y: 370 }, { x: 780, y: 370 }, { x: 900, y: 360 }],
+    colors: ['rgba(46, 204, 113, 0.85)', 'rgba(39, 174, 96, 0.45)'],
+    sparkColors: ['#A8E6CF', '#55EFC4', '#FFFFFF'],
+    sparkCount: 6,
+    sparkHeight: 85
+  },
+  gold: {
+    name: 'Or Corsaire Yazex',
+    spots: [{ x: 100, y: 360 }, { x: 220, y: 370 }, { x: 780, y: 370 }, { x: 900, y: 360 }],
+    colors: ['rgba(255, 215, 0, 0.9)', 'rgba(217, 119, 6, 0.5)'],
+    sparkColors: ['#FFFBEB', '#FDE047', '#F59E0B'],
+    sparkCount: 8,
+    sparkHeight: 90
+  },
+  black: {
+    name: 'Fumée Noire Toxique',
+    spots: [{ x: 100, y: 360 }, { x: 220, y: 370 }, { x: 780, y: 370 }, { x: 900, y: 360 }],
+    colors: ['rgba(20, 20, 22, 0.95)', 'rgba(55, 65, 81, 0.65)'],
+    sparkColors: ['#E2E8F0', '#94A3B8', '#F1F5F9'],
+    sparkCount: 5,
+    sparkHeight: 95
+  },
+  dual: {
+    name: 'Grand Brasier (12 Foyers)',
+    spots: [
+      { x: 80, y: 365 }, { x: 160, y: 368 }, { x: 240, y: 370 }, { x: 320, y: 372 },
+      { x: 400, y: 375 }, { x: 480, y: 375 }, { x: 520, y: 375 }, { x: 600, y: 372 },
+      { x: 680, y: 370 }, { x: 760, y: 368 }, { x: 840, y: 365 }, { x: 920, y: 365 }
+    ],
+    colors: ['rgba(255, 69, 0, 0.9)', 'rgba(245, 158, 11, 0.5)'],
+    sparkColors: ['#FEF08A', '#F97316', '#EF4444', '#FFFFFF'],
+    sparkCount: 10,
+    sparkHeight: 110
+  }
+};
 
 const TIFO_TYPES = [
   { id: 'chore', name: '1. Chorégraphie', desc: 'Mosaïque de feuilles & cartons colorés levés par la tribune', icon: '🟥🟩' },
@@ -59,7 +107,7 @@ const PIXEL_FONT = {
   ' ': [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
 };
 
-export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca' }) {
+export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', playerData, setPlayerData, onOpenArmory }) {
   const canvasRef = useRef(null);
 
   // Studio configuration states
@@ -445,29 +493,26 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca' }
     // 4. PYROTECHNICS & FUMIGÈNES (Craquage at t >= 7s)
     if (isPlaying && simTime >= 7) {
       const pyroIntensity = Math.min((simTime - 7) / 2, 1);
-      const smokeSpots = [
-        { x: 100, y: 360 },
-        { x: width - 100, y: 360 },
-        { x: 220, y: 370 },
-        { x: width - 220, y: 370 }
-      ];
+      const activeEffectId = playerData?.inventory?.activePyro || 'red';
+      const pyroCfg = PYRO_CONFIGS[activeEffectId] || PYRO_CONFIGS.red;
 
-      smokeSpots.forEach((spot) => {
+      pyroCfg.spots.forEach((spot) => {
         const glow = ctx.createRadialGradient(spot.x, spot.y, 5, spot.x, spot.y, 90 * pyroIntensity);
-        glow.addColorStop(0, 'rgba(255, 69, 0, 0.8)');
-        glow.addColorStop(0.5, 'rgba(229, 62, 62, 0.4)');
+        glow.addColorStop(0, pyroCfg.colors[0]);
+        glow.addColorStop(0.5, pyroCfg.colors[1]);
         glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = glow;
         ctx.beginPath();
         ctx.arc(spot.x, spot.y, 90 * pyroIntensity, 0, Math.PI * 2);
         ctx.fill();
 
-        for (let s = 0; s < 6; s++) {
-          ctx.fillStyle = '#FFEAA7';
+        for (let s = 0; s < pyroCfg.sparkCount; s++) {
+          const sparkColor = pyroCfg.sparkColors[s % pyroCfg.sparkColors.length];
+          ctx.fillStyle = sparkColor;
           ctx.beginPath();
           ctx.arc(
-            spot.x + (Math.random() - 0.5) * 40,
-            spot.y - Math.random() * 80 * pyroIntensity,
+            spot.x + (Math.random() - 0.5) * 45,
+            spot.y - Math.random() * pyroCfg.sparkHeight * pyroIntensity,
             Math.random() * 3 + 1,
             0,
             Math.PI * 2
@@ -489,7 +534,7 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca' }
     ctx.lineWidth = 3;
     ctx.strokeRect(40, 410, width - 80, 40);
 
-  }, [tifoType, grid, voileCount, voileLayout, voileScale, voileImage, voileImage2, object3dImage, isPlaying, simTime, getCoveredColumns]);
+  }, [tifoType, grid, voileCount, voileLayout, voileScale, voileImage, voileImage2, object3dImage, isPlaying, simTime, getCoveredColumns, playerData]);
 
   const handleSubmit = () => {
     setSubmitted(true);
@@ -497,6 +542,7 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca' }
       id: Date.now(),
       title: tifoTitle,
       type: tifoType,
+      pyro: playerData?.inventory?.activePyro || 'red',
       author: 'Capo_Alger',
       club: initialClub,
       votes: 1,
@@ -549,29 +595,51 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca' }
       <div className="relative rounded-2xl overflow-hidden border-2 border-pirate-gold shadow-2xl bg-black">
         
         {/* Simulation Timeline HUD Bar */}
-        <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-20 flex items-center justify-between bg-black/75 backdrop-blur-md border border-pirate-gold/30 px-3 py-2 sm:px-5 sm:py-3 rounded-xl">
-          <div className="flex items-center gap-2 sm:gap-3">
+        <div className="absolute top-1.5 left-1.5 right-1.5 sm:top-4 sm:left-4 sm:right-4 z-20 flex items-center justify-between bg-black/80 backdrop-blur-md border border-pirate-gold/30 px-2 py-1.5 sm:px-5 sm:py-3 rounded-xl">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <button
               onClick={startSimulation}
               disabled={isPlaying}
-              className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 text-white font-heading text-xs sm:text-sm tracking-wider px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-fumi-glow font-bold transition-all"
+              className="inline-flex items-center gap-1 sm:gap-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 text-white font-heading text-[11px] sm:text-sm tracking-wider px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg shadow-fumi-glow font-bold transition-all shrink-0"
             >
-              <Play size={14} fill="currentColor" /> {isPlaying ? `SIMULATION (${simTime}s)` : 'LANCER LE MATCH (15s)'}
+              <Play size={12} fill="currentColor" className="sm:w-3.5 sm:h-3.5 shrink-0" />
+              {isPlaying ? (
+                <>
+                  <span className="sm:hidden">SIMU ({simTime}s)</span>
+                  <span className="hidden sm:inline">SIMULATION ({simTime}s)</span>
+                </>
+              ) : (
+                <>
+                  <span className="sm:hidden">LANCER (15s)</span>
+                  <span className="hidden sm:inline">LANCER LE MATCH (15s)</span>
+                </>
+              )}
             </button>
             
             <button
               onClick={() => { setIsPlaying(false); setSimTime(0); }}
-              className="p-1.5 rounded-lg bg-black/60 text-gray-400 hover:text-white border border-gray-700"
+              className="p-1 sm:p-1.5 rounded-lg bg-black/60 text-gray-400 hover:text-white border border-gray-700 shrink-0"
               title="Réinitialiser"
             >
-              <RotateCcw size={14} />
+              <RotateCcw size={12} className="sm:w-3.5 sm:h-3.5" />
             </button>
           </div>
 
-          <div className="hidden md:flex items-center gap-4 font-mono text-[11px] text-gray-300">
-            <span>0-4s : Déploiement Voile</span>
-            <span>4-7s : Levée Choré</span>
-            <span className="text-red-400 font-bold">7-15s : Craquage Pyro 🔥</span>
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-4 font-mono text-[11px] text-gray-300">
+              <span>0-4s : Déploiement Voile</span>
+              <span>4-7s : Levée Choré</span>
+              <span className="text-red-400 font-bold">7-15s : Craquage Pyro 🔥</span>
+            </div>
+
+            <button
+              onClick={onOpenArmory}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/80 hover:bg-black border border-pirate-gold/40 hover:border-pirate-gold text-pirate-gold text-[10px] sm:text-xs font-mono transition-all shadow-gold-glow shrink-0 cursor-pointer"
+              title="Changer d'effet pyrotechnique à l'Armurerie"
+            >
+              <Flame size={12} className="text-red-500 animate-pulse" />
+              <span className="font-heading">PYRO: {(PYRO_CONFIGS[playerData?.inventory?.activePyro || 'red'] || PYRO_CONFIGS.red).name}</span>
+            </button>
           </div>
         </div>
 
@@ -595,32 +663,117 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca' }
       {/* Editor Controls & Tooling */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left: Tifo Mode Selector */}
-        <div className="bg-pirate-dark border border-pirate-gold/30 rounded-2xl p-5 space-y-3 shadow-xl">
-          <h3 className="font-heading text-xl text-pirate-gold tracking-wider flex items-center gap-2">
-            <Layers size={18} /> 1. TYPE DE TIFO
-          </h3>
+        {/* Left Column: Tifo Mode Selector & Pyro Packs */}
+        <div className="space-y-4">
+          <div className="bg-pirate-dark border border-pirate-gold/30 rounded-2xl p-5 space-y-3 shadow-xl">
+            <h3 className="font-heading text-xl text-pirate-gold tracking-wider flex items-center gap-2">
+              <Layers size={18} /> 1. TYPE DE TIFO
+            </h3>
 
-          <div className="space-y-2">
-            {TIFO_TYPES.map((t) => (
+            <div className="space-y-2">
+              {TIFO_TYPES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTifoType(t.id)}
+                  className={`w-full text-left p-3 rounded-xl border transition-all ${
+                    tifoType === t.id
+                      ? 'bg-black/70 border-pirate-gold shadow-gold-glow'
+                      : 'bg-black/30 border-pirate-gold/20 hover:border-pirate-gold/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{t.icon}</span>
+                    <span className="font-heading text-sm text-white">{t.name}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1 font-body leading-relaxed">
+                    {t.desc}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Pyrotechnics Pack Selector */}
+          <div className="bg-pirate-dark border border-pirate-gold/30 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xl">
+            <div className="flex items-center justify-between border-b border-pirate-gold/20 pb-2">
+              <h3 className="font-heading text-lg text-pirate-gold tracking-wider flex items-center gap-2">
+                <Flame size={17} className="text-red-500 animate-pulse" /> 2. CRAQUAGE VIRAGE
+              </h3>
               <button
-                key={t.id}
-                onClick={() => setTifoType(t.id)}
-                className={`w-full text-left p-3 rounded-xl border transition-all ${
-                  tifoType === t.id
-                    ? 'bg-black/70 border-pirate-gold shadow-gold-glow'
-                    : 'bg-black/30 border-pirate-gold/20 hover:border-pirate-gold/50'
-                }`}
+                onClick={onOpenArmory}
+                className="text-[11px] font-mono text-pirate-gold/80 hover:text-white underline flex items-center gap-1 cursor-pointer"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">{t.icon}</span>
-                  <span className="font-heading text-sm text-white">{t.name}</span>
-                </div>
-                <p className="text-[11px] text-gray-400 mt-1 font-body leading-relaxed">
-                  {t.desc}
-                </p>
+                <ShoppingCart size={12} /> Armurerie
               </button>
-            ))}
+            </div>
+
+            <p className="text-[11px] text-gray-400 font-body leading-relaxed">
+              Effet pyrotechnique déployé à la 7e seconde lors du coup d'envoi.
+            </p>
+
+            <div className="space-y-1.5">
+              {TIFO_PYRO_PACKS.map((pack) => {
+                const isUnlocked = (playerData?.inventory?.unlockedPyro || ['red']).includes(pack.id) || pack.isFree;
+                const isActive = (playerData?.inventory?.activePyro || 'red') === pack.id;
+
+                return (
+                  <button
+                    key={pack.id}
+                    onClick={() => {
+                      if (isUnlocked) {
+                        setPlayerData(prev => ({
+                          ...prev,
+                          inventory: {
+                            ...prev.inventory,
+                            activePyro: pack.id
+                          }
+                        }));
+                      } else {
+                        onOpenArmory();
+                      }
+                    }}
+                    className={`w-full text-left p-2 rounded-xl border flex items-center justify-between transition-all ${
+                      isActive
+                        ? 'bg-black/80 border-pirate-gold shadow-gold-glow'
+                        : isUnlocked
+                          ? 'bg-black/30 border-gray-800 hover:border-pirate-gold/50 cursor-pointer'
+                          : 'bg-black/20 border-gray-900 opacity-60 hover:opacity-100 cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3.5 h-3.5 rounded-full border border-white/40 shrink-0 shadow-sm" 
+                        style={{ backgroundColor: pack.hex }}
+                      />
+                      <div>
+                        <span className="font-heading text-xs text-white block leading-tight">
+                          {pack.name}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          {pack.badge}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      {isActive ? (
+                        <span className="text-[9px] font-mono font-bold text-pirate-gold px-1.5 py-0.5 rounded bg-pirate-gold/20 border border-pirate-gold/50">
+                          ÉQUIPÉ
+                        </span>
+                      ) : isUnlocked ? (
+                        <span className="text-[10px] font-mono text-gray-400 hover:text-white">
+                          Choisir
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-yellow-400 flex items-center gap-1">
+                          🪙 {pack.cost}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import PromoModal from './components/PromoModal';
+import ArmoryModal from './components/ArmoryModal';
 import Lobby from './pages/Lobby';
 import UltrasRunner from './games/runner/UltrasRunner';
 import TifoStudio from './games/tifo-studio/TifoStudio';
@@ -16,7 +17,14 @@ export default function App() {
     name: 'Capo_Alger',
     club: 'mca',
     coins: 250,
-    lastVisited: Date.now()
+    lastVisited: Date.now(),
+    inventory: {
+      fumis: 2,           // 2 starting smoke shields (invincibility)
+      signals: 1,         // 1 starting coin magnet
+      revives: 1,         // 1 starting revive flare
+      unlockedPyro: ['red'], // unlocked Tifo pyro skins
+      activePyro: 'red'   // currently equipped pyro skin
+    }
   };
 
   // Player State (Persisted in localStorage avec expiration glissante de 7 jours)
@@ -33,7 +41,15 @@ export default function App() {
           return { ...DEFAULT_PLAYER, lastVisited: Date.now() };
         }
         // Visite active dans les 7 jours -> Sauvegarde des pièces et actualisation du chrono
-        return { ...parsed, lastVisited: Date.now() };
+        const inventory = {
+          fumis: 2,
+          signals: 1,
+          revives: 1,
+          unlockedPyro: ['red'],
+          activePyro: 'red',
+          ...(parsed.inventory || {})
+        };
+        return { ...DEFAULT_PLAYER, ...parsed, inventory, lastVisited: Date.now() };
       }
       return DEFAULT_PLAYER;
     } catch {
@@ -61,6 +77,9 @@ export default function App() {
     discountText: '',
     title: ''
   });
+
+  // Ultras Armory Modal State
+  const [isArmoryOpen, setIsArmoryOpen] = useState(false);
 
   // Save changes to localStorage avec horodatage glissant
   useEffect(() => {
@@ -109,6 +128,7 @@ export default function App() {
         setCurrentView={setCurrentView}
         playerData={playerData}
         setPlayerData={setPlayerData}
+        onOpenArmory={() => setIsArmoryOpen(true)}
       />
 
       {/* Main View Router */}
@@ -118,6 +138,7 @@ export default function App() {
             setCurrentView={setCurrentView}
             playerData={playerData}
             highScores={highScores}
+            onOpenArmory={() => setIsArmoryOpen(true)}
           />
         )}
 
@@ -127,7 +148,9 @@ export default function App() {
             onRewardUnlocked={handleRewardUnlocked}
             highScores={highScores}
             setHighScores={setHighScores}
+            playerData={playerData}
             setPlayerData={setPlayerData}
+            onOpenArmory={() => setIsArmoryOpen(true)}
           />
         )}
 
@@ -136,6 +159,9 @@ export default function App() {
             onBack={() => setCurrentView('lobby')}
             onTifoSubmit={handleTifoSubmit}
             initialClub={playerData.club}
+            playerData={playerData}
+            setPlayerData={setPlayerData}
+            onOpenArmory={() => setIsArmoryOpen(true)}
           />
         )}
 
@@ -150,6 +176,14 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Ultras Armory Modal (Power-Ups & Pyro Shop) */}
+      <ArmoryModal
+        isOpen={isArmoryOpen}
+        onClose={() => setIsArmoryOpen(false)}
+        playerData={playerData}
+        setPlayerData={setPlayerData}
+      />
 
       {/* E-Commerce Reward Promo Modal */}
       <PromoModal

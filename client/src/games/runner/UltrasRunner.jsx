@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Play, RotateCcw, ArrowDown, ArrowUp, Volume2, VolumeX, Sparkles, Award, ArrowLeft, Trophy } from 'lucide-react';
+import { Play, RotateCcw, ArrowDown, ArrowUp, Volume2, VolumeX, Sparkles, Award, ArrowLeft, Trophy, Flame, Zap, ShoppingCart } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, setHighScores, setPlayerData }) {
+export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, setHighScores, playerData, setPlayerData, onOpenArmory }) {
   const canvasRef = useRef(null);
   
   // Game states
@@ -13,6 +13,10 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
   const [rewardTriggered, setRewardTriggered] = useState(false);
   const [ducking, setDucking] = useState(false);
 
+  // In-Game Power-Ups Active States
+  const [smokeActive, setSmokeActive] = useState(false);
+  const [magnetActive, setMagnetActive] = useState(false);
+
   // References to keep game loop performant without React re-renders
   const gameRef = useRef({
     running: false,
@@ -21,6 +25,8 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     coinsCollected: 0,
     lastSpawnTime: 0,
     lastCoinSpawnTime: 0,
+    smokeShieldUntil: 0,
+    magnetUntil: 0,
     
     // Player object
     player: {
@@ -67,7 +73,6 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     if (g.player.isGrounded && !g.player.isDucking) {
       g.player.velocityY = g.player.jumpForce;
       g.player.isGrounded = false;
-      // Add dust kick particle
       createParticles(g.player.x + 20, 330, '#C5A367', 6);
     }
   }, [gameState]);
@@ -79,7 +84,6 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     g.player.isDucking = isDown;
     setDucking(isDown);
     if (isDown && !g.player.isGrounded) {
-      // Fast fall when ducking in mid-air
       g.player.velocityY += 6;
     }
   }, [gameState]);
@@ -100,6 +104,86 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     }
   };
 
+  // Activate Smoke Shield (Invincibility 6s)
+  const activateSmokeShield = useCallback(() => {
+    const g = gameRef.current;
+    if (gameState !== 'playing' || !g.running) return;
+    const inv = playerData?.inventory || {};
+    if ((inv.fumis || 0) <= 0) return;
+
+    setPlayerData(prev => ({
+      ...prev,
+      inventory: {
+        ...prev.inventory,
+        fumis: Math.max(0, (prev.inventory?.fumis || 0) - 1)
+      }
+    }));
+
+    g.smokeShieldUntil = Date.now() + 6000;
+    setSmokeActive(true);
+    createParticles(g.player.x + 25, g.player.y + 25, '#FF4500', 20, 2);
+
+    setTimeout(() => {
+      setSmokeActive(false);
+    }, 6000);
+  }, [gameState, playerData, setPlayerData]);
+
+  // Activate Coin Magnet (Magnet Suction 8s)
+  const activateCoinMagnet = useCallback(() => {
+    const g = gameRef.current;
+    if (gameState !== 'playing' || !g.running) return;
+    const inv = playerData?.inventory || {};
+    if ((inv.signals || 0) <= 0) return;
+
+    setPlayerData(prev => ({
+      ...prev,
+      inventory: {
+        ...prev.inventory,
+        signals: Math.max(0, (prev.inventory?.signals || 0) - 1)
+      }
+    }));
+
+    g.magnetUntil = Date.now() + 8000;
+    setMagnetActive(true);
+    createParticles(g.player.x + 25, g.player.y + 25, '#FFD700', 25, 2);
+
+    setTimeout(() => {
+      setMagnetActive(false);
+    }, 8000);
+  }, [gameState, playerData, setPlayerData]);
+
+  // Activate Revive (Second Chance)
+  const handleRevive = useCallback(() => {
+    const g = gameRef.current;
+    const inv = playerData?.inventory || {};
+    if ((inv.revives || 0) <= 0) return;
+
+    setPlayerData(prev => ({
+      ...prev,
+      inventory: {
+        ...prev.inventory,
+        revives: Math.max(0, (prev.inventory?.revives || 0) - 1)
+      }
+    }));
+
+    // Clear obstacles close to player to prevent instant re-crash
+    g.obstacles = g.obstacles.filter(o => o.x > 500);
+    g.player.y = 280;
+    g.player.velocityY = 0;
+    g.player.isGrounded = true;
+    g.player.isDucking = false;
+
+    // 3 seconds grace invulnerability
+    g.smokeShieldUntil = Date.now() + 3000;
+    setSmokeActive(true);
+    setTimeout(() => setSmokeActive(false), 3000);
+
+    g.running = true;
+    setGameState('playing');
+    createParticles(g.player.x + 25, 280, '#FFD700', 30, 2.5);
+    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+  }, [playerData, setPlayerData]);
+
   // Start / Restart game
   const startGame = () => {
     const g = gameRef.current;
@@ -114,6 +198,10 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     g.player.velocityY = 0;
     g.player.isGrounded = true;
     g.player.isDucking = false;
+    g.smokeShieldUntil = 0;
+    g.magnetUntil = 0;
+    setSmokeActive(false);
+    setMagnetActive(false);
     
     setScore(0);
     setCoins(0);
@@ -134,6 +222,12 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
       } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
         e.preventDefault();
         handleDuck(true);
+      } else if (e.code === 'KeyF') {
+        e.preventDefault();
+        activateSmokeShield();
+      } else if (e.code === 'KeyM') {
+        e.preventDefault();
+        activateCoinMagnet();
       }
     };
 
@@ -150,7 +244,7 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [gameState, handleJump, handleDuck]);
+  }, [gameState, handleJump, handleDuck, activateSmokeShield, activateCoinMagnet]);
 
   // Main 60 FPS Game Loop
   useEffect(() => {
@@ -422,6 +516,16 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
             pY < obs.y + obs.height &&
             pY + pHeight > obs.y
           ) {
+            // Check if SMOKE SHIELD is active!
+            const now = Date.now();
+            if (now < (g.smokeShieldUntil || 0)) {
+              // Pulverize obstacle!
+              createParticles(obs.x + obs.width / 2, obs.y + obs.height / 2, '#FF4500', 14, 2);
+              createParticles(obs.x + obs.width / 2, obs.y + obs.height / 2, '#FFEAA7', 8, 1.5);
+              g.obstacles.splice(i, 1);
+              continue;
+            }
+
             // HIT! GAME OVER!
             g.running = false;
             const finalScore = Math.floor(g.distance / 6);
@@ -448,7 +552,24 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
       // --- DRAW & UPDATE COINS ---
       for (let i = g.coinsList.length - 1; i >= 0; i--) {
         const c = g.coinsList[i];
-        if (g.running) c.x -= g.speed;
+        if (g.running) {
+          c.x -= g.speed;
+
+          // Check if COIN MAGNET is active!
+          const now = Date.now();
+          if (now < (g.magnetUntil || 0)) {
+            const p = g.player;
+            const targetX = p.x + p.width / 2;
+            const targetY = p.y + p.height / 2;
+            const dx = targetX - c.x;
+            const dy = targetY - c.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 450) {
+              c.x += (dx / dist) * Math.min(dist * 0.18 + 8, 20);
+              c.y += (dy / dist) * Math.min(dist * 0.18 + 8, 20);
+            }
+          }
+        }
 
         // Draw animated gold coin
         ctx.save();
@@ -523,13 +644,29 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         ctx.rotate(Math.sin(Date.now() / 80) * 0.06);
       }
 
+      // Check active power-ups
+      const now = Date.now();
+      const hasSmokeShield = now < (g.smokeShieldUntil || 0);
+      const hasCoinMagnet = now < (g.magnetUntil || 0);
+
+      if (hasSmokeShield) {
+        ctx.shadowColor = '#FF4500';
+        ctx.shadowBlur = 25;
+        if (Math.random() < 0.6) {
+          createParticles(p.x, p.y + 20, '#FF4500', 3, 0.8);
+        }
+      } else if (hasCoinMagnet) {
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 22;
+      }
+
       // Player Base Badge & Border (Guaranteed 100% visible)
       ctx.beginPath();
       ctx.arc(0, 0, 26, 0, Math.PI * 2);
-      ctx.fillStyle = '#1A1A1B';
+      ctx.fillStyle = hasSmokeShield ? '#C53030' : hasCoinMagnet ? '#B7791F' : '#1A1A1B';
       ctx.fill();
       ctx.lineWidth = 3;
-      ctx.strokeStyle = '#C5A367';
+      ctx.strokeStyle = hasSmokeShield ? '#FF4500' : hasCoinMagnet ? '#FFD700' : '#C5A367';
       ctx.stroke();
 
       if (g.logoImg && g.logoImg.complete && g.logoImg.naturalWidth > 0) {
@@ -571,7 +708,16 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
           <ArrowLeft size={16} /> LOBBY
         </button>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={onOpenArmory}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-pirate-gold/20 to-yellow-600/20 hover:from-pirate-gold/30 hover:to-yellow-600/30 border border-pirate-gold/50 px-2.5 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-mono text-pirate-gold hover:text-white transition-all shadow-gold-glow"
+            title="Ouvrir l'Armurerie du Virage"
+          >
+            <Flame size={13} className="text-red-500 animate-pulse" />
+            <span className="font-heading tracking-wider">ARMURERIE</span>
+          </button>
+
           <div className="flex items-center gap-1.5 bg-black/60 border border-pirate-gold/30 px-2.5 sm:px-3.5 py-1 rounded-lg text-[11px] sm:text-xs font-mono">
             <Trophy size={13} className="text-yellow-400" />
             <span>RECORD : <strong>{highScores.runner || 0} PTS</strong></span>
@@ -649,14 +795,14 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
               TOUCHER POUR JOUER
             </button>
             <p className="text-[10px] sm:text-xs text-gray-400 font-mono">
-              [TAP / ESPACE] Sauter &nbsp;•&nbsp; [BOUTON BAS] Glisser
+              [TAP / ESPACE] Sauter &nbsp;•&nbsp; [BOUTON BAS] Glisser &nbsp;•&nbsp; [F] Fumigène &nbsp;•&nbsp; [M] Aimant
             </p>
           </div>
         )}
 
         {/* Game Over Overlay */}
         {gameState === 'gameover' && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-3 sm:p-6 text-center space-y-2 sm:space-y-6 animate-fadeIn">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-3 sm:p-6 text-center space-y-2 sm:space-y-5 animate-fadeIn">
             <div className="space-y-0.5 sm:space-y-1">
               <span className="text-red-500 font-heading text-xs sm:text-xl tracking-widest block uppercase animate-pulse">
                 KABSA ! INTERCEPTION DU VIRAGE
@@ -678,12 +824,30 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
               </div>
             </div>
 
+            {/* Revive Button or Armory Re-stock prompt */}
+            {(playerData?.inventory?.revives || 0) > 0 ? (
+              <button
+                onClick={handleRevive}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 hover:from-yellow-300 hover:to-amber-400 text-black font-heading text-xs sm:text-base tracking-wider px-4 py-2 sm:px-6 sm:py-3 rounded-xl shadow-gold-glow font-bold uppercase transition-all hover:scale-105 animate-pulse"
+              >
+                <Zap size={16} fill="currentColor" /> TIRER UNE FUSÉE (RÉANIMER x{playerData?.inventory?.revives})
+              </button>
+            ) : (
+              <button
+                onClick={onOpenArmory}
+                className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-mono text-pirate-gold/80 hover:text-white bg-pirate-dark/60 border border-pirate-gold/30 px-3 py-1.5 rounded-lg transition-colors hover:border-pirate-gold"
+              >
+                <ShoppingCart size={13} className="text-pirate-gold" />
+                <span>0 Fusée de secours • Recharger à l'Armurerie</span>
+              </button>
+            )}
+
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
               <button
                 onClick={startGame}
                 className="inline-flex items-center gap-1.5 sm:gap-2 bg-red-600 hover:bg-red-700 text-white font-heading text-xs sm:text-lg tracking-wider px-4 py-2 sm:px-7 sm:py-3 rounded-xl shadow-fumi-glow font-bold uppercase transition-all hover:scale-105"
               >
-                <RotateCcw size={15} /> REJOUER
+                <RotateCcw size={15} /> NOUVELLE PARTIE
               </button>
               
               {score >= 500 && (
@@ -698,6 +862,100 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
           </div>
         )}
 
+      </div>
+
+      {/* Power-Ups HUD Action Dock (Accessible on Mobile and Desktop) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-1">
+        {/* Fumigène Button */}
+        <button
+          onClick={() => {
+            if ((playerData?.inventory?.fumis || 0) > 0) {
+              activateSmokeShield();
+            } else {
+              onOpenArmory();
+            }
+          }}
+          disabled={gameState !== 'playing' && (playerData?.inventory?.fumis || 0) > 0}
+          className={`relative flex items-center justify-center gap-2 p-2 sm:p-3 rounded-xl border-2 font-heading transition-all ${
+            smokeActive
+              ? 'bg-red-600 text-white border-yellow-400 shadow-fumi-glow animate-pulse scale-[1.02]'
+              : (playerData?.inventory?.fumis || 0) > 0
+                ? 'bg-black/70 hover:bg-red-950/60 border-red-500/50 text-red-400 hover:border-red-400 cursor-pointer'
+                : 'bg-black/40 border-gray-800 text-gray-500 hover:border-pirate-gold/40 cursor-pointer'
+          }`}
+          title="Bouclier Fumigène (6s d'invincibilité)"
+        >
+          <Flame size={20} className={smokeActive ? 'animate-bounce text-yellow-300' : 'text-red-500'} />
+          <div className="text-left">
+            <div className="text-xs sm:text-sm font-bold tracking-wider leading-tight flex items-center gap-1.5">
+              <span>FUMIGÈNE</span>
+              <span className="hidden sm:inline text-[10px] font-mono px-1 py-0.2 rounded bg-black/60 border border-red-500/30 text-gray-300">[F]</span>
+            </div>
+            <div className="text-[10px] sm:text-xs font-mono">
+              {smokeActive ? (
+                <span className="text-yellow-300 font-bold">INVINCIBLE !</span>
+              ) : (playerData?.inventory?.fumis || 0) > 0 ? (
+                <span className="text-gray-300">x{playerData?.inventory?.fumis} dispo</span>
+              ) : (
+                <span className="text-pirate-gold/80 hover:underline">+ Recharger</span>
+              )}
+            </div>
+          </div>
+        </button>
+
+        {/* Signal Magnet Button */}
+        <button
+          onClick={() => {
+            if ((playerData?.inventory?.signals || 0) > 0) {
+              activateCoinMagnet();
+            } else {
+              onOpenArmory();
+            }
+          }}
+          disabled={gameState !== 'playing' && (playerData?.inventory?.signals || 0) > 0}
+          className={`relative flex items-center justify-center gap-2 p-2 sm:p-3 rounded-xl border-2 font-heading transition-all ${
+            magnetActive
+              ? 'bg-yellow-500 text-black border-white shadow-gold-glow animate-pulse scale-[1.02]'
+              : (playerData?.inventory?.signals || 0) > 0
+                ? 'bg-black/70 hover:bg-yellow-950/60 border-yellow-500/50 text-yellow-400 hover:border-yellow-400 cursor-pointer'
+                : 'bg-black/40 border-gray-800 text-gray-500 hover:border-pirate-gold/40 cursor-pointer'
+          }`}
+          title="Signal Éclairant (Aimant à pièces 8s)"
+        >
+          <Zap size={20} className={magnetActive ? 'animate-bounce text-white' : 'text-yellow-400'} />
+          <div className="text-left">
+            <div className="text-xs sm:text-sm font-bold tracking-wider leading-tight flex items-center gap-1.5">
+              <span>SIGNAL</span>
+              <span className="hidden sm:inline text-[10px] font-mono px-1 py-0.2 rounded bg-black/60 border border-yellow-500/30 text-gray-300">[M]</span>
+            </div>
+            <div className="text-[10px] sm:text-xs font-mono">
+              {magnetActive ? (
+                <span className="text-black font-bold">AIMANT ACTIF !</span>
+              ) : (playerData?.inventory?.signals || 0) > 0 ? (
+                <span className="text-gray-300">x{playerData?.inventory?.signals} dispo</span>
+              ) : (
+                <span className="text-pirate-gold/80 hover:underline">+ Recharger</span>
+              )}
+            </div>
+          </div>
+        </button>
+
+        {/* Armory Quick Access Button */}
+        <button
+          onClick={onOpenArmory}
+          className="flex items-center justify-center gap-2 p-2 sm:p-3 rounded-xl border-2 border-pirate-gold/40 bg-black/70 hover:bg-pirate-dark/80 text-pirate-gold hover:text-white hover:border-pirate-gold transition-all"
+        >
+          <ShoppingCart size={18} className="text-pirate-gold" />
+          <div className="text-left">
+            <div className="text-xs sm:text-sm font-bold tracking-wider leading-tight">
+              ARMURERIE
+            </div>
+            <div className="text-[10px] sm:text-xs font-mono text-gray-400 flex items-center gap-1">
+              <span>🪙 {playerData?.coins || 0}</span>
+              <span className="hidden sm:inline">• Boutique</span>
+            </div>
+          </div>
+        </button>
       </div>
 
       {/* Touch Screen Mobile On-Screen Controls */}

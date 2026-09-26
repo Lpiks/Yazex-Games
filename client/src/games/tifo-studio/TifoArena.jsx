@@ -167,6 +167,11 @@ export default function TifoArena({ onBack, communityTifos = [], onVote }) {
                     </h3>
                     <p className="text-xs text-gray-400 font-mono mt-0.5">
                       Créé par <strong className="text-gray-200">@{tifo.author}</strong> • Type : <span className="text-yellow-400 uppercase font-bold">{tifo.type}</span>
+                      {tifo.pyro && (
+                        <span className="ml-2 text-red-400 font-bold">
+                          • Pyro: {tifo.pyro.toUpperCase()} 🔥
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-gray-300 font-body mt-2 leading-relaxed">
                       {tifo.description || 'Simulation complète de virage avec chorégraphie et bâche géante قماش.'}
