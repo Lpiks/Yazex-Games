@@ -726,69 +726,72 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
               TOUCHER POUR JOUER
             </button>
             <p className="text-[10px] sm:text-xs text-gray-400 font-mono">
-              [TAP / ESPACE] Sauter &nbsp;•&nbsp; [BOUTON BAS] Glisser &nbsp;•&nbsp; [F] Fumigène &nbsp;•&nbsp; [M] Aimant
+              <span className="hidden lg:inline">[ESPACE] Sauter &nbsp;•&nbsp; [BAS] Glisser &nbsp;•&nbsp; [F] Fumigène &nbsp;•&nbsp; [M] Aimant</span>
+              <span className="lg:hidden">Touchez pour Sauter &nbsp;•&nbsp; Glissez vers le bas ou bouton pour Esquiver</span>
             </p>
           </div>
         )}
 
-        {/* Game Over Overlay */}
+        {/* Game Over Overlay (Full-screen modal on mobile to prevent clipping, canvas overlay on desktop) */}
         {gameState === 'gameover' && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-3 sm:p-6 text-center space-y-2 sm:space-y-5 animate-fadeIn">
-            <div className="space-y-0.5 sm:space-y-1">
-              <span className="text-red-500 font-heading text-xs sm:text-xl tracking-widest block uppercase animate-pulse">
-                KABSA ! INTERCEPTION DU VIRAGE
-              </span>
-              <h2 className="font-heading text-2xl sm:text-5xl text-white tracking-wider">
-                GAME OVER
-              </h2>
-            </div>
-
-            <div className="flex items-center justify-center gap-6 sm:grid sm:grid-cols-2 sm:gap-6 bg-pirate-dark/80 border border-pirate-gold/30 px-4 py-1.5 sm:p-5 rounded-xl sm:rounded-2xl w-auto sm:w-full max-w-xs shadow-xl">
-              <div>
-                <span className="text-[10px] sm:text-xs text-gray-400 uppercase font-mono block">Score</span>
-                <span className="font-heading text-xl sm:text-3xl text-pirate-gold font-bold">{score}</span>
+          <div className="fixed inset-0 z-50 sm:absolute sm:inset-0 sm:z-30 bg-black/90 sm:bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-5 sm:p-6 text-center space-y-4 sm:space-y-5 animate-fadeIn">
+            <div className="w-full max-w-sm sm:max-w-none bg-pirate-dark/95 sm:bg-transparent border-2 border-pirate-gold/40 sm:border-0 rounded-2xl p-5 sm:p-0 space-y-4 sm:space-y-5 shadow-2xl sm:shadow-none flex flex-col items-center">
+              <div className="space-y-1">
+                <span className="text-red-500 font-heading text-sm sm:text-xl tracking-widest block uppercase animate-pulse">
+                  KABSA ! INTERCEPTION DU VIRAGE
+                </span>
+                <h2 className="font-heading text-3xl sm:text-5xl text-white tracking-wider">
+                  GAME OVER
+                </h2>
               </div>
-              <div className="w-px h-6 bg-pirate-gold/30 sm:hidden" />
-              <div>
-                <span className="text-[10px] sm:text-xs text-gray-400 uppercase font-mono block">Pièces</span>
-                <span className="font-heading text-xl sm:text-3xl text-yellow-400 font-bold">+{coins}</span>
+
+              <div className="flex items-center justify-center gap-6 sm:grid sm:grid-cols-2 sm:gap-6 bg-black/60 sm:bg-pirate-dark/80 border border-pirate-gold/30 px-6 py-3 sm:p-5 rounded-xl sm:rounded-2xl w-full max-w-xs shadow-xl tabular-nums">
+                <div>
+                  <span className="text-xs text-gray-400 uppercase font-mono block">Score</span>
+                  <span className="font-heading text-2xl sm:text-3xl text-pirate-gold font-bold">{score.toLocaleString()}</span>
+                </div>
+                <div className="w-px h-8 bg-pirate-gold/30 sm:hidden" />
+                <div>
+                  <span className="text-xs text-gray-400 uppercase font-mono block">Pièces</span>
+                  <span className="font-heading text-2xl sm:text-3xl text-yellow-400 font-bold">+{coins.toLocaleString()}</span>
+                </div>
               </div>
-            </div>
 
-            {/* Revive Button or Armory Re-stock prompt */}
-            {(playerData?.inventory?.revives || 0) > 0 ? (
-              <button
-                onClick={handleRevive}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 hover:from-yellow-300 hover:to-amber-400 text-black font-heading text-xs sm:text-base tracking-wider px-4 py-2 sm:px-6 sm:py-3 rounded-xl shadow-gold-glow font-bold uppercase transition-all hover:scale-105 animate-pulse"
-              >
-                <Zap size={16} fill="currentColor" /> TIRER UNE FUSÉE (RÉANIMER x{playerData?.inventory?.revives})
-              </button>
-            ) : (
-              <button
-                onClick={onOpenArmory}
-                className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-mono text-pirate-gold/80 hover:text-white bg-pirate-dark/60 border border-pirate-gold/30 px-3 py-1.5 rounded-lg transition-colors hover:border-pirate-gold"
-              >
-                <ShoppingCart size={13} className="text-pirate-gold" />
-                <span>0 Fusée de secours • Recharger à l'Armurerie</span>
-              </button>
-            )}
-
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
-              <button
-                onClick={startGame}
-                className="inline-flex items-center gap-1.5 sm:gap-2 bg-red-600 hover:bg-red-700 text-white font-heading text-xs sm:text-lg tracking-wider px-4 py-2 sm:px-7 sm:py-3 rounded-xl shadow-fumi-glow font-bold uppercase transition-all hover:scale-105"
-              >
-                <RotateCcw size={15} /> NOUVELLE PARTIE
-              </button>
-              
-              {score >= 500 && (
+              {/* Revive Button or Armory Re-stock prompt */}
+              {(playerData?.inventory?.revives || 0) > 0 ? (
                 <button
-                  onClick={() => onRewardUnlocked('YAZEX500', '-10% SUR YAZEX SHIP', 'PIRATE ULTRAS DÉVERROUILLÉ !')}
-                  className="inline-flex items-center gap-1.5 sm:gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-heading text-xs sm:text-lg tracking-wider px-4 py-2 sm:px-6 sm:py-3 rounded-xl shadow-gold-glow font-bold uppercase transition-all"
+                  onClick={handleRevive}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 hover:from-yellow-300 hover:to-amber-400 text-black font-heading text-sm sm:text-base tracking-wider px-5 py-3 rounded-xl shadow-gold-glow font-bold uppercase transition-all hover:scale-105 animate-pulse"
                 >
-                  <Award size={15} /> CODE PROMO
+                  <Zap size={16} fill="currentColor" /> TIRER UNE FUSÉE (RÉANIMER x{playerData?.inventory?.revives})
+                </button>
+              ) : (
+                <button
+                  onClick={onOpenArmory}
+                  className="inline-flex items-center gap-1.5 text-xs font-mono text-pirate-gold/80 hover:text-white bg-black/60 border border-pirate-gold/30 px-3.5 py-2 rounded-lg transition-colors hover:border-pirate-gold"
+                >
+                  <ShoppingCart size={13} className="text-pirate-gold" />
+                  <span>0 Fusée de secours • Recharger à l'Armurerie</span>
                 </button>
               )}
+
+              <div className="flex flex-wrap items-center justify-center gap-3 w-full sm:w-auto">
+                <button
+                  onClick={startGame}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-heading text-sm sm:text-lg tracking-wider px-5 py-3 sm:px-7 rounded-xl shadow-fumi-glow font-bold uppercase transition-all hover:scale-105"
+                >
+                  <RotateCcw size={16} /> NOUVELLE PARTIE
+                </button>
+                
+                {score >= 500 && (
+                  <button
+                    onClick={() => onRewardUnlocked('YAZEX500', '-10% SUR YAZEX SHIP', 'PIRATE ULTRAS DÉVERROUILLÉ !')}
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-heading text-sm sm:text-lg tracking-wider px-5 py-3 sm:px-6 rounded-xl shadow-gold-glow font-bold uppercase transition-all"
+                  >
+                    <Award size={16} /> CODE PROMO
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -820,7 +823,7 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
           <div className="text-left">
             <div className="text-xs sm:text-sm font-bold tracking-wider leading-tight flex items-center gap-1.5">
               <span>FUMIGÈNE</span>
-              <span className="hidden sm:inline text-[10px] font-mono px-1 py-0.2 rounded bg-black/60 border border-red-500/30 text-gray-300">[F]</span>
+              <span className="hidden lg:inline text-[10px] font-mono px-1 py-0.2 rounded bg-black/60 border border-red-500/30 text-gray-300">[F]</span>
             </div>
             <div className="text-[10px] sm:text-xs font-mono">
               {smokeActive ? (
@@ -857,7 +860,7 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
           <div className="text-left">
             <div className="text-xs sm:text-sm font-bold tracking-wider leading-tight flex items-center gap-1.5">
               <span>SIGNAL</span>
-              <span className="hidden sm:inline text-[10px] font-mono px-1 py-0.2 rounded bg-black/60 border border-yellow-500/30 text-gray-300">[M]</span>
+              <span className="hidden lg:inline text-[10px] font-mono px-1 py-0.2 rounded bg-black/60 border border-yellow-500/30 text-gray-300">[M]</span>
             </div>
             <div className="text-[10px] sm:text-xs font-mono">
               {magnetActive ? (
@@ -890,8 +893,8 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         </button>
       </div>
 
-      {/* Touch Screen Mobile On-Screen Controls */}
-      <div className="sm:hidden grid grid-cols-2 gap-3 pt-2">
+      {/* Touch Screen Mobile & Tablet On-Screen Controls */}
+      <div className="lg:hidden grid grid-cols-2 gap-3 pt-2">
         <button
           onTouchStart={() => handleDuck(true)}
           onTouchEnd={() => handleDuck(false)}
