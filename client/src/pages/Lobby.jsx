@@ -46,19 +46,19 @@ export default function Lobby({ setCurrentView, playerData, highScores, onOpenAr
         </div>
 
         {/* Floating Quick Badges */}
-        <div className="hidden lg:flex absolute right-12 bottom-12 items-center gap-6 bg-black/50 border border-pirate-gold/20 p-4 rounded-2xl backdrop-blur-md">
+        <div className="hidden lg:flex absolute right-12 bottom-12 items-center gap-6 bg-black/50 border border-pirate-gold/20 p-4 rounded-2xl backdrop-blur-md tabular-nums">
           <div className="text-center">
             <span className="block text-2xl font-heading text-pirate-gold font-bold">
-              {highScores.runner || 0}
+              {(highScores.runner || 0).toLocaleString()}
             </span>
             <span className="text-[11px] text-gray-400 uppercase tracking-widest">Meilleur Score</span>
           </div>
           <div className="w-px h-8 bg-pirate-gold/20" />
           <div className="text-center">
             <span className="block text-2xl font-heading text-red-400 font-bold">
-              500 PTS
+              TOP RECORD
             </span>
-            <span className="text-[11px] text-gray-400 uppercase tracking-widest">Objectif Code Promo</span>
+            <span className="text-[11px] text-gray-400 uppercase tracking-widest">Battez le Record</span>
           </div>
         </div>
       </section>

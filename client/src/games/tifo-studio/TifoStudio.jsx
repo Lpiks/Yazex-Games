@@ -559,27 +559,27 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
     <div className="space-y-6 max-w-6xl mx-auto pb-20 px-2 sm:px-0">
       
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-pirate-gold/20 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-pirate-gold/20 pb-3">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-pirate-gold hover:text-white font-heading text-xs sm:text-sm tracking-wider transition-colors"
+          className="inline-flex items-center gap-1.5 py-1.5 pr-3 self-start text-pirate-gold hover:text-white font-heading text-xs sm:text-sm tracking-wider transition-colors"
         >
           <ArrowLeft size={16} /> RETOUR AU LOBBY
         </button>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <input
             type="text"
             value={tifoTitle}
             onChange={(e) => setTifoTitle(e.target.value)}
             placeholder="Nom de ton Tifo..."
-            className="bg-black/60 border border-pirate-gold/40 text-pirate-paper font-heading text-xs sm:text-sm px-3 py-1.5 rounded-xl focus:outline-none focus:border-pirate-gold max-w-[200px] sm:max-w-xs"
+            className="flex-1 min-w-0 sm:flex-none sm:w-64 bg-black/60 border border-pirate-gold/40 text-pirate-paper font-heading text-xs sm:text-sm px-3 py-2 rounded-xl focus:outline-none focus:border-pirate-gold"
           />
 
           <button
             onClick={handleSubmit}
             disabled={submitted}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-heading text-xs sm:text-sm tracking-wider font-bold shadow-gold-glow transition-all ${
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl font-heading text-xs sm:text-sm tracking-wider font-bold shadow-gold-glow transition-all ${
               submitted 
                 ? 'bg-green-600 text-white' 
                 : 'bg-yellow-500 hover:bg-yellow-400 text-black'

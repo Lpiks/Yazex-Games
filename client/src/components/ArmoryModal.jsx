@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Flame, Sparkles, Shield, Magnet, RotateCcw, Check, ShoppingCart, Award, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Flame, Sparkles, Shield, Magnet, RotateCcw, Check, ShoppingCart, Award, Zap, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const RUNNER_ITEMS = [
@@ -82,6 +82,15 @@ export const TIFO_PYRO_PACKS = [
 export default function ArmoryModal({ isOpen, onClose, playerData, setPlayerData }) {
   const [activeTab, setActiveTab] = useState('runner'); // 'runner' | 'tifo'
   const [purchaseSuccess, setPurchaseSuccess] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -178,18 +187,19 @@ export default function ArmoryModal({ isOpen, onClose, playerData, setPlayerData
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Coins Balance */}
-            <div className="flex items-center gap-1.5 bg-black/80 border border-yellow-500/50 px-3 py-1.5 rounded-xl font-heading text-sm sm:text-base text-yellow-400 shadow-inner">
-              <span>🪙</span>
+            <div className="flex items-center gap-1.5 bg-black/80 border border-yellow-500/50 px-3 py-1.5 rounded-xl font-heading text-sm sm:text-base text-yellow-400 shadow-inner tabular-nums">
+              <Coins size={15} className="text-yellow-400 shrink-0" />
               <span className="font-bold">{playerData.coins.toLocaleString()}</span>
             </div>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl bg-black/60 border border-gray-700 text-gray-400 hover:text-white hover:border-pirate-gold transition-colors"
+              aria-label="Fermer l'Armurerie"
+              className="p-2 rounded-xl bg-black/60 border border-gray-700 text-gray-400 hover:text-white hover:border-pirate-gold transition-colors"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
           </div>
         </div>
@@ -279,14 +289,16 @@ export default function ArmoryModal({ isOpen, onClose, playerData, setPlayerData
                     <button
                       onClick={() => buyConsumable(item)}
                       disabled={!canAfford}
-                      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-heading text-xs tracking-wider font-bold transition-all ${
+                      className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-heading text-xs tracking-wider font-bold transition-all tabular-nums ${
                         canAfford
                           ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black shadow-md active:scale-95'
                           : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
                       }`}
                     >
                       <ShoppingCart size={13} />
-                      ACHETER ({item.cost} 🪙)
+                      <span>ACHETER ({item.cost}</span>
+                      <Coins size={12} />
+                      <span>)</span>
                     </button>
                   </div>
                 </div>
@@ -363,7 +375,10 @@ export default function ArmoryModal({ isOpen, onClose, playerData, setPlayerData
                         </>
                       ) : (
                         <>
-                          <ShoppingCart size={13} /> DÉBLOQUER ({pack.cost} 🪙)
+                          <ShoppingCart size={13} />
+                          <span className="tabular-nums">DÉBLOQUER ({pack.cost}</span>
+                          <Coins size={12} />
+                          <span>)</span>
                         </>
                       )}
                     </button>

@@ -74,10 +74,10 @@ export default function TifoArena({ onBack, communityTifos = [], onVote }) {
     <div className="space-y-10 max-w-6xl mx-auto pb-16">
       
       {/* Top Navigation */}
-      <div className="flex items-center justify-between border-b border-pirate-gold/20 pb-4">
+      <div className="flex items-center justify-between border-b border-pirate-gold/20 pb-3">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-pirate-gold hover:text-white font-heading text-sm tracking-wider transition-colors"
+          className="inline-flex items-center gap-2 py-2 pr-3 text-pirate-gold hover:text-white font-heading text-sm tracking-wider transition-colors"
         >
           <ArrowLeft size={18} /> RETOUR AU LOBBY
         </button>
@@ -100,7 +100,7 @@ export default function TifoArena({ onBack, communityTifos = [], onVote }) {
               LA COUPE DU MEILLEUR TIFO DZ
             </h1>
             <p className="text-sm text-gray-300 font-body max-w-xl">
-              Vote pour les Tifos les plus créatifs créés par la communauté. Le vainqueur est proclamé en live sur TikTok et gagne le **Trophée Gravé Yazex Ship** et un bon d'achat exclusif !
+              Vote pour les Tifos les plus créatifs créés par la communauté. Le vainqueur est proclamé en live sur TikTok et gagne le <strong className="text-yellow-400">Trophée Gravé Yazex Ship</strong> et un bon d'achat exclusif !
             </p>
           </div>
 

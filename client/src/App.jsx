@@ -81,6 +81,11 @@ export default function App() {
   // Ultras Armory Modal State
   const [isArmoryOpen, setIsArmoryOpen] = useState(false);
 
+  // Scroll to top when switching views (especially on mobile bottom nav)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentView]);
+
   // Save changes to localStorage avec horodatage glissant
   useEffect(() => {
     try {

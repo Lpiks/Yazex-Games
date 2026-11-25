@@ -1,9 +1,12 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Play, RotateCcw, ArrowDown, ArrowUp, Volume2, VolumeX, Sparkles, Award, ArrowLeft, Trophy, Flame, Zap, ShoppingCart } from 'lucide-react';
+import { Play, RotateCcw, ArrowDown, ArrowUp, Volume2, VolumeX, Sparkles, Award, ArrowLeft, Trophy, Flame, Zap, ShoppingCart, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { drawPirateRunner } from './drawPirateRunner';
+import { drawObstacle } from './drawObstacles';
 
 export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, setHighScores, playerData, setPlayerData, onOpenArmory }) {
   const canvasRef = useRef(null);
+  const touchStartYRef = useRef(null);
   
   // Game states
   const [gameState, setGameState] = useState('start'); // 'start' | 'playing' | 'gameover'
@@ -52,19 +55,15 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     coinsList: [],
     particles: [],
 
-    // Assets cache
-    logoImg: null
+    // Procedural stride phase (0..1)
+    stridePhase: 0,
+    clubId: playerData?.club || 'mca',
   });
 
-  // Load logo image for player sprite
+  // Keep clubId synced without restarting the game loop
   useEffect(() => {
-    const img = new Image();
-    img.src = '/logo.jpg';
-    img.onerror = () => { img.src = '/logo-circle.png'; };
-    img.onload = () => {
-      gameRef.current.logoImg = img;
-    };
-  }, []);
+    gameRef.current.clubId = playerData?.club || 'mca';
+  }, [playerData?.club]);
 
   // Jump action
   const handleJump = useCallback(() => {
@@ -338,6 +337,15 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         g.bgCityX += g.speed * 0.2;
         g.bgCranesX += g.speed * 0.5;
         g.bgGroundX += g.speed;
+        g.stridePhase = (g.stridePhase + g.speed * 0.0042) % 1;
+
+        // Footstep dust or slide sparks
+        const runner = g.player;
+        if (runner.isGrounded && !runner.isDucking && (Math.abs(g.stridePhase - 0.08) < 0.028 || Math.abs(g.stridePhase - 0.58) < 0.028)) {
+          createParticles(runner.x + runner.width / 2, groundY - 2, 'rgba(197, 163, 103, 0.65)', 2, 0.55);
+        } else if (runner.isDucking && Math.random() < 0.45) {
+          createParticles(runner.x + 12, groundY - 2, 'rgba(255, 160, 60, 0.75)', 2, 0.75);
+        }
 
         // Progressive speed curve
         g.speed = 6.5 + Math.min(g.distance / 400, 6.0);
@@ -429,77 +437,12 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         const obs = g.obstacles[i];
         if (g.running) obs.x -= g.speed;
 
-        if (obs.type === 'fumi') {
-          // FUMIGÈNE AU SOL
-          // Red metallic canister
-          ctx.fillStyle = '#C53030';
-          ctx.fillRect(obs.x, obs.y + 12, obs.width, obs.height - 12);
-          ctx.fillStyle = '#FFD700'; // Yellow collar
-          ctx.fillRect(obs.x + 2, obs.y + 10, obs.width - 4, 4);
+        drawObstacle(ctx, obs, Date.now());
 
-          // Intense flame & sparks
-          ctx.fillStyle = '#FF4500';
-          ctx.beginPath();
-          ctx.arc(obs.x + obs.width / 2, obs.y + 8, 8 + Math.sin(Date.now() / 60) * 3, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Dynamic 2.5D Lighting Halo
-          const glowGrad = ctx.createRadialGradient(
-            obs.x + obs.width / 2, obs.y, 4,
-            obs.x + obs.width / 2, obs.y, 70
-          );
-          glowGrad.addColorStop(0, 'rgba(255, 69, 0, 0.4)');
-          glowGrad.addColorStop(1, 'rgba(255, 69, 0, 0)');
-          ctx.fillStyle = glowGrad;
-          ctx.fillRect(obs.x - 50, obs.y - 40, obs.width + 100, obs.height + 60);
-
-          // Emit smoke particles while running
-          if (g.running && Math.random() < 0.4) {
-            createParticles(obs.x + obs.width / 2, obs.y + 5, 'rgba(229, 62, 62, 0.7)', 2, 0.5);
-          }
-
-        } else if (obs.type === 'signal') {
-          // SIGNAL AÉRIEN (FUSÉE DE DÉTRESSE DESCENDANTE)
-          // Rocket cylinder
-          ctx.save();
-          ctx.translate(obs.x + obs.width / 2, obs.y + obs.height / 2);
-          ctx.rotate(-0.08);
-
-          // Red rocket body with yellow grip
-          ctx.fillStyle = '#E53E3E';
-          ctx.fillRect(-obs.width / 2, -obs.height / 2, obs.width, obs.height);
-          ctx.fillStyle = '#ECC94B';
-          ctx.fillRect(-obs.width / 2 + 6, -obs.height / 2, 10, obs.height);
-
-          // Rocket tail flame
-          ctx.fillStyle = '#FFD700';
-          ctx.beginPath();
-          ctx.moveTo(obs.width / 2, -obs.height / 2 + 2);
-          ctx.lineTo(obs.width / 2 + 18 + Math.random() * 8, 0);
-          ctx.lineTo(obs.width / 2, obs.height / 2 - 2);
-          ctx.fill();
-
-          ctx.restore();
-
-          // Sizzling rocket spark trail
-          if (g.running) {
-            createParticles(obs.x + obs.width + 10, obs.y + obs.height / 2, '#FFD700', 1, 1.2);
-          }
-
-        } else if (obs.type === 'barrier') {
-          // BARRIÈRE DE POLICE (Obstacle large)
-          ctx.fillStyle = '#2B6CB0'; // Police blue
-          ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-          
-          // White striped pattern
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(obs.x + 8, obs.y, 8, obs.height);
-          ctx.fillRect(obs.x + 28, obs.y, 8, obs.height);
-
-          // "POLICE" Label
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 9px monospace';
-          ctx.fillText('1312', obs.x + 12, obs.y + 25);
+        if (obs.type === 'fumi' && g.running && Math.random() < 0.4) {
+          createParticles(obs.x + obs.width / 2, obs.y + 5, 'rgba(229, 62, 62, 0.7)', 2, 0.5);
+        } else if (obs.type === 'signal' && g.running) {
+          createParticles(obs.x + obs.width + 10, obs.y + obs.height / 2, '#FFD700', 1, 1.2);
         }
 
         // --- COLLISION DETECTION (Strict AABB with ducking support) ---
@@ -629,64 +572,26 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         ctx.globalAlpha = 1;
       }
 
-      // --- DRAW PLAYER (YAZEX PIRATE MASCOT) ---
+      // --- DRAW PLAYER (PROCEDURAL PIRATE ULTRAS RUNNER) ---
       const p = g.player;
-      ctx.save();
-      ctx.translate(p.x + p.width / 2, p.y + (p.isDucking ? 15 : p.height / 2));
-
-      // Duck scale or jump rotation
-      if (p.isDucking) {
-        ctx.scale(1.2, 0.55); // Flattened for sliding!
-      } else if (!p.isGrounded) {
-        ctx.rotate(p.velocityY * 0.04); // Jump tilt
-      } else {
-        // Subtle running bobbing
-        ctx.rotate(Math.sin(Date.now() / 80) * 0.06);
-      }
-
-      // Check active power-ups
       const now = Date.now();
       const hasSmokeShield = now < (g.smokeShieldUntil || 0);
       const hasCoinMagnet = now < (g.magnetUntil || 0);
 
-      if (hasSmokeShield) {
-        ctx.shadowColor = '#FF4500';
-        ctx.shadowBlur = 25;
-        if (Math.random() < 0.6) {
-          createParticles(p.x, p.y + 20, '#FF4500', 3, 0.8);
-        }
-      } else if (hasCoinMagnet) {
-        ctx.shadowColor = '#FFD700';
-        ctx.shadowBlur = 22;
+      if (hasSmokeShield && Math.random() < 0.6) {
+        createParticles(p.x + 10, p.y + 20, '#FF4500', 3, 0.8);
       }
 
-      // Player Base Badge & Border (Guaranteed 100% visible)
-      ctx.beginPath();
-      ctx.arc(0, 0, 26, 0, Math.PI * 2);
-      ctx.fillStyle = hasSmokeShield ? '#C53030' : hasCoinMagnet ? '#B7791F' : '#1A1A1B';
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = hasSmokeShield ? '#FF4500' : hasCoinMagnet ? '#FFD700' : '#C5A367';
-      ctx.stroke();
-
-      if (g.logoImg && g.logoImg.complete && g.logoImg.naturalWidth > 0) {
-        // Draw the official circular pirate logo as character sprite
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(0, 0, 24, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(g.logoImg, -24, -24, 48, 48);
-        ctx.restore();
-      } else {
-        // Procedural pirate fallback (Skull & Crossbones)
-        ctx.fillStyle = '#C5A367';
-        ctx.font = 'bold 22px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('☠️', 0, 2);
-      }
-
-      ctx.restore();
+      drawPirateRunner(ctx, {
+        player: p,
+        groundY,
+        isRunning: g.running,
+        stridePhase: g.stridePhase,
+        clubId: g.clubId,
+        hasSmokeShield,
+        hasCoinMagnet,
+        now,
+      });
 
       // Loop frame
       animationId = requestAnimationFrame(render);
@@ -700,32 +605,32 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     <div className="space-y-4 max-w-5xl mx-auto pb-24 md:pb-12 px-1 sm:px-0">
       
       {/* Top Header & Navigation */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between gap-2 px-1">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-pirate-gold hover:text-white font-heading text-xs sm:text-sm tracking-wider transition-colors"
+          className="inline-flex items-center gap-1.5 py-2 pr-2 text-pirate-gold hover:text-white font-heading text-xs sm:text-sm tracking-wider transition-colors"
         >
           <ArrowLeft size={16} /> LOBBY
         </button>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           <button
             onClick={onOpenArmory}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-pirate-gold/20 to-yellow-600/20 hover:from-pirate-gold/30 hover:to-yellow-600/30 border border-pirate-gold/50 px-2.5 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-mono text-pirate-gold hover:text-white transition-all shadow-gold-glow"
+            className="flex items-center gap-1.5 bg-gradient-to-r from-pirate-gold/20 to-yellow-600/20 hover:from-pirate-gold/30 hover:to-yellow-600/30 border border-pirate-gold/50 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-mono text-pirate-gold hover:text-white transition-all shadow-gold-glow"
             title="Ouvrir l'Armurerie du Virage"
           >
             <Flame size={13} className="text-red-500 animate-pulse" />
             <span className="font-heading tracking-wider">ARMURERIE</span>
           </button>
 
-          <div className="flex items-center gap-1.5 bg-black/60 border border-pirate-gold/30 px-2.5 sm:px-3.5 py-1 rounded-lg text-[11px] sm:text-xs font-mono">
+          <div className="flex items-center gap-1.5 bg-black/60 border border-pirate-gold/30 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-mono tabular-nums">
             <Trophy size={13} className="text-yellow-400" />
-            <span>RECORD : <strong>{highScores.runner || 0} PTS</strong></span>
+            <span>RECORD : <strong>{(highScores.runner || 0).toLocaleString()} PTS</strong></span>
           </div>
 
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-1.5 rounded-lg bg-black/60 border border-pirate-gold/30 text-pirate-gold hover:text-white transition-colors"
+            className="p-2 rounded-lg bg-black/60 border border-pirate-gold/30 text-pirate-gold hover:text-white transition-colors"
             title={soundEnabled ? "Couper le son" : "Activer le son"}
           >
             {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
@@ -738,36 +643,62 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         
         {/* HUD Overlay (Score & Coins) */}
         <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 z-20 flex items-center justify-between pointer-events-none">
-          <div className="bg-black/80 backdrop-blur-md border border-pirate-gold/40 px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl flex items-center gap-2 sm:gap-4">
+          <div className="bg-black/80 backdrop-blur-md border border-pirate-gold/40 px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl flex items-center gap-2 sm:gap-4 tabular-nums">
             <div className="font-heading text-xs sm:text-2xl text-white tracking-widest">
-              SCORE : <span className="text-pirate-gold font-bold">{score}</span>
+              SCORE : <span className="text-pirate-gold font-bold">{score.toLocaleString()}</span>
             </div>
             <div className="w-px h-3.5 sm:h-5 bg-pirate-gold/30" />
             <div className="font-heading text-xs sm:text-xl text-yellow-400 tracking-wider flex items-center gap-1">
-              <span>🪙</span> {coins}
+              <Coins size={14} className="text-yellow-400 shrink-0" /> {coins.toLocaleString()}
             </div>
           </div>
 
-          {/* Reward Goal Progress Bar */}
-          <div className="bg-black/80 backdrop-blur-md border border-pirate-gold/40 px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-right">
-            <span className="text-[9px] sm:text-[11px] font-mono text-gray-300 block">
-              {score >= 500 ? "🎉 PROMO DÉVERROUILLÉ !" : `Objectif : ${score}/500 pts`}
-            </span>
-            <div className="w-20 sm:w-36 h-1.5 sm:h-2 bg-gray-800 rounded-full overflow-hidden mt-0.5">
-              <div 
-                className="h-full bg-gradient-to-r from-red-600 to-yellow-500 transition-all duration-300"
-                style={{ width: `${Math.min((score / 500) * 100, 100)}%` }}
-              />
-            </div>
-          </div>
+          {/* High Score / Record Chase Bar */}
+          {(() => {
+            const best = highScores.runner || 0;
+            const target = Math.max(best, 500);
+            const isNewRecord = best > 0 && score > best;
+            const pct = Math.min((score / target) * 100, 100);
+            return (
+              <div className="bg-black/80 backdrop-blur-md border border-pirate-gold/40 px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-right tabular-nums">
+                <span className={`text-[9px] sm:text-[11px] font-mono block ${isNewRecord ? 'text-yellow-400 font-bold' : 'text-gray-300'}`}>
+                  {isNewRecord
+                    ? `👑 NOUVEAU RECORD : ${score.toLocaleString()} pts`
+                    : best > 0
+                      ? `Record : ${score.toLocaleString()} / ${best.toLocaleString()} pts`
+                      : `Premier palier : ${score.toLocaleString()} / 500 pts`}
+                </span>
+                <div className="w-24 sm:w-40 h-1.5 sm:h-2 bg-gray-800 rounded-full overflow-hidden mt-0.5">
+                  <div
+                    className={`h-full transition-all duration-300 ${isNewRecord ? 'bg-gradient-to-r from-yellow-400 to-amber-300' : 'bg-gradient-to-r from-red-600 to-yellow-500'}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
-        {/* The 2.5D Canvas Component (Fully responsive, aspect-ratio locked, zero horizontal cropping) */}
+        {/* The 2.5D Canvas Component (Fully responsive, aspect-ratio locked, touch swipe/tap support) */}
         <canvas
           ref={canvasRef}
           width={1000}
           height={450}
-          className="w-full h-auto aspect-[1000/450] block cursor-pointer bg-black"
+          className="w-full h-auto aspect-[1000/450] block cursor-pointer bg-black touch-none"
+          onTouchStart={(e) => {
+            touchStartYRef.current = e.touches[0].clientY;
+          }}
+          onTouchMove={(e) => {
+            if (touchStartYRef.current === null || gameState !== 'playing') return;
+            const dy = e.touches[0].clientY - touchStartYRef.current;
+            if (dy > 24) {
+              handleDuck(true);
+            }
+          }}
+          onTouchEnd={() => {
+            touchStartYRef.current = null;
+            if (ducking) handleDuck(false);
+          }}
           onClick={() => {
             if (gameState === 'start' || gameState === 'gameover') startGame();
             else handleJump();
@@ -790,7 +721,7 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
             </div>
             <button
               onClick={startGame}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-xs sm:text-xl tracking-wider px-4 py-2 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl shadow-fumi-glow font-bold uppercase transition-transform hover:scale-105 active:scale-95"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading text-sm sm:text-xl tracking-wider px-6 py-3 sm:px-8 sm:py-4 rounded-xl shadow-fumi-glow font-bold uppercase transition-transform hover:scale-105 active:scale-95"
             >
               TOUCHER POUR JOUER
             </button>
@@ -943,15 +874,16 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         {/* Armory Quick Access Button */}
         <button
           onClick={onOpenArmory}
-          className="flex items-center justify-center gap-2 p-2 sm:p-3 rounded-xl border-2 border-pirate-gold/40 bg-black/70 hover:bg-pirate-dark/80 text-pirate-gold hover:text-white hover:border-pirate-gold transition-all"
+          className="flex items-center justify-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-xl border-2 border-pirate-gold/40 bg-black/70 hover:bg-pirate-dark/80 text-pirate-gold hover:text-white hover:border-pirate-gold transition-all overflow-hidden"
         >
-          <ShoppingCart size={18} className="text-pirate-gold" />
-          <div className="text-left">
-            <div className="text-xs sm:text-sm font-bold tracking-wider leading-tight">
+          <ShoppingCart size={16} className="text-pirate-gold shrink-0 sm:w-[18px] sm:h-[18px]" />
+          <div className="text-left min-w-0">
+            <div className="text-[11px] sm:text-sm font-bold tracking-wider leading-tight truncate">
               ARMURERIE
             </div>
-            <div className="text-[10px] sm:text-xs font-mono text-gray-400 flex items-center gap-1">
-              <span>🪙 {playerData?.coins || 0}</span>
+            <div className="text-[10px] sm:text-xs font-mono text-gray-400 flex items-center gap-1 tabular-nums">
+              <Coins size={11} className="text-yellow-400 shrink-0" />
+              <span>{(playerData?.coins || 0).toLocaleString()}</span>
               <span className="hidden sm:inline">• Boutique</span>
             </div>
           </div>
@@ -959,26 +891,28 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
       </div>
 
       {/* Touch Screen Mobile On-Screen Controls */}
-      <div className="sm:hidden grid grid-cols-2 gap-4 pt-2">
+      <div className="sm:hidden grid grid-cols-2 gap-3 pt-2">
         <button
           onTouchStart={() => handleDuck(true)}
           onTouchEnd={() => handleDuck(false)}
           onMouseDown={() => handleDuck(true)}
           onMouseUp={() => handleDuck(false)}
-          className={`py-5 rounded-xl border-2 font-heading text-xl tracking-wider flex items-center justify-center gap-2 transition-all ${
+          className={`py-4 px-2 rounded-xl border-2 font-heading text-base tracking-wider flex items-center justify-center gap-1.5 transition-all select-none ${
             ducking 
               ? 'bg-yellow-500 text-black border-yellow-400 shadow-gold-glow' 
               : 'bg-black/60 border-pirate-gold/40 text-pirate-gold'
           }`}
         >
-          <ArrowDown size={24} /> GLISSER (DUCK)
+          <ArrowDown size={20} className="shrink-0" />
+          <span>GLISSER</span>
         </button>
 
         <button
           onClick={handleJump}
-          className="py-5 rounded-xl bg-red-600 hover:bg-red-500 active:bg-red-700 text-white border-2 border-red-400 font-heading text-xl tracking-wider flex items-center justify-center gap-2 shadow-fumi-glow transition-all"
+          className="py-4 px-2 rounded-xl bg-red-600 hover:bg-red-500 active:bg-red-700 text-white border-2 border-red-400 font-heading text-base tracking-wider flex items-center justify-center gap-1.5 shadow-fumi-glow transition-all select-none"
         >
-          <ArrowUp size={24} /> SAUTER (JUMP)
+          <ArrowUp size={20} className="shrink-0" />
+          <span>SAUTER</span>
         </button>
       </div>
 
