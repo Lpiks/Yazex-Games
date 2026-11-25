@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Sparkles, Flame, Trophy, Users, ShieldAlert, Award, Star, ArrowRight } from 'lucide-react';
+import { Play, Anchor, Palette, Flame, Trophy, Users, ShieldAlert, Award, Star, ArrowRight, Coins } from 'lucide-react';
 
 export default function Lobby({ setCurrentView, playerData, highScores, onOpenArmory }) {
   return (
@@ -12,7 +12,7 @@ export default function Lobby({ setCurrentView, playerData, highScores, onOpenAr
 
         <div className="relative z-10 max-w-3xl space-y-3 sm:space-y-4">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-pirate-gold/15 border border-pirate-gold/30 text-pirate-gold text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-            <Sparkles size={12} /> Saison 2026 : Virage Ouvert
+            <Anchor size={12} /> Saison 2026 : Virage Ouvert
           </div>
           
           <h1 className="font-heading text-3xl sm:text-6xl text-white tracking-wide leading-none">
@@ -34,7 +34,7 @@ export default function Lobby({ setCurrentView, playerData, highScores, onOpenAr
               onClick={() => setCurrentView('tifo-studio')}
               className="inline-flex items-center gap-2 bg-black/60 hover:bg-black/90 border border-pirate-gold text-pirate-gold font-heading text-sm sm:text-lg tracking-wider px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl hover:shadow-gold-glow transition-all font-bold cursor-pointer"
             >
-              <Sparkles size={16} /> TIFO STUDIO
+              <Palette size={16} /> TIFO STUDIO
             </button>
             <button
               onClick={onOpenArmory}
@@ -127,7 +127,7 @@ export default function Lobby({ setCurrentView, playerData, highScores, onOpenAr
               <div className="pt-4 border-t border-red-950/60 flex items-center justify-between">
                 <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
                   <span>⚡ 60 FPS</span>
-                  <span>🪙 Pièces à ramasser</span>
+                  <span className="inline-flex items-center gap-1"><Coins size={12} className="text-yellow-400" /> Pièces à ramasser</span>
                   <span className="text-yellow-400 font-bold">🎁 Promo à 500 pts</span>
                 </div>
                 

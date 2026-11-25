@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, ExternalLink, Sparkles, X } from 'lucide-react';
+import { Copy, Check, ExternalLink, Award, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function PromoModal({ isOpen, onClose, promoCode, discountText, title }) {
@@ -44,7 +44,7 @@ export default function PromoModal({ isOpen, onClose, promoCode, discountText, t
         {/* Top Header */}
         <div className="text-center relative z-10 space-y-2 mb-6">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-700/10 border-2 border-red-700 text-red-700 shadow-md">
-            <Sparkles size={28} className="animate-spin-slow" />
+            <Award size={28} />
           </div>
           <h3 className="font-heading text-3xl text-red-800 tracking-wider">
             {title || "TRÉSOR DÉVERROUILLÉ !"}

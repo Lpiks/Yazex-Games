@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Flame, Play, Sparkles, Check, ArrowLeft, Heart, Award, Share2 } from 'lucide-react';
+import { Trophy, Flame, Play, Check, ArrowLeft, Heart, Award, Share2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const INITIAL_CONTEST_TIFOS = [

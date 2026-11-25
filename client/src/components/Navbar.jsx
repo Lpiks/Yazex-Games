@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Flame, Play, Shield, Coins, Sparkles, ExternalLink, Home, X } from 'lucide-react';
+import { Trophy, Flame, Play, Shield, Coins, Palette, ExternalLink, Home, X } from 'lucide-react';
 
 const ALGERIAN_CLUBS = [
   { id: 'mca', name: 'MC Alger', colors: 'from-green-600 to-red-600', badge: '🟢🔴' },
@@ -92,7 +92,7 @@ export default function Navbar({ currentView, setCurrentView, playerData, setPla
                   : 'text-gray-400 hover:text-pirate-gold hover:bg-white/5'
               }`}
             >
-              <Sparkles size={14} className={currentView === 'tifo-studio' ? 'text-yellow-400 animate-spin-slow' : 'text-gray-400'} />
+              <Palette size={14} className={currentView === 'tifo-studio' ? 'text-yellow-400' : 'text-gray-400'} />
               <span>TIFO STUDIO</span>
             </button>
 
@@ -231,7 +231,7 @@ export default function Navbar({ currentView, setCurrentView, playerData, setPla
               : 'text-gray-400 hover:text-gray-200'
           }`}
         >
-          <Sparkles size={18} className={currentView === 'tifo-studio' ? 'text-pirate-gold animate-spin-slow' : ''} />
+          <Palette size={18} className={currentView === 'tifo-studio' ? 'text-pirate-gold' : ''} />
           <span className="text-[10px] font-heading tracking-wider mt-0.5">TIFO</span>
         </button>
 

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Play, RotateCcw, ArrowDown, ArrowUp, Volume2, VolumeX, Sparkles, Award, ArrowLeft, Trophy, Flame, Zap, ShoppingCart, Coins } from 'lucide-react';
+import { Play, RotateCcw, ArrowDown, ArrowUp, Volume2, VolumeX, Award, ArrowLeft, Trophy, Flame, Zap, ShoppingCart, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { drawPirateRunner } from './drawPirateRunner';
 import { drawObstacle } from './drawObstacles';

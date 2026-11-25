@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, Play, Upload, Palette, Layers, Film, RotateCcw, Send, Check, ArrowLeft, Sliders, Type, Flame, ShoppingCart } from 'lucide-react';
+import { Play, Upload, Palette, Layers, Film, RotateCcw, Send, Check, ArrowLeft, Sliders, Type, Flame, ShoppingCart, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { TIFO_PYRO_PACKS } from '../../components/ArmoryModal';
 
@@ -53,7 +53,7 @@ export const PYRO_CONFIGS = {
 const TIFO_TYPES = [
   { id: 'chore', name: '1. Chorégraphie', desc: 'Mosaïque de feuilles & cartons colorés levés par la tribune', icon: '🟥🟩' },
   { id: 'voile', name: '2. Voile Géant (قماش)', desc: 'Bâche monumentale peinte à la main qui monte jusqu\'au toit', icon: '🏴‍☠️' },
-  { id: 'mixte', name: '3. Mixte', desc: 'Voile monumental entouré d\'ailes ou de cœurs chorégraphiés', icon: '✨' },
+  { id: 'mixte', name: '3. Mixte', desc: 'Voile monumental entouré d\'ailes ou de cœurs chorégraphiés', icon: '🏟️' },
   { id: '3d', name: '4. 3D Mobile Animé', desc: 'Éléments suspendus sur câbles avec mise en scène multi-étapes', icon: '🚀' },
 ];
 
@@ -765,8 +765,8 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
                           Choisir
                         </span>
                       ) : (
-                        <span className="text-[10px] font-mono text-yellow-400 flex items-center gap-1">
-                          🪙 {pack.cost}
+                        <span className="text-[10px] font-mono text-yellow-400 flex items-center gap-1 tabular-nums">
+                          <Coins size={11} /> {pack.cost}
                         </span>
                       )}
                     </div>

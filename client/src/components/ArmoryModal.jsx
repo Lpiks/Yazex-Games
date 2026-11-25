@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Flame, Sparkles, Shield, Magnet, RotateCcw, Check, ShoppingCart, Award, Zap, Coins } from 'lucide-react';
+import { X, Flame, Shield, Magnet, RotateCcw, Check, ShoppingCart, Award, Zap, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const RUNNER_ITEMS = [
