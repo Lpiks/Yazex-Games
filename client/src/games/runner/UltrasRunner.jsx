@@ -58,6 +58,8 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     // Procedural stride phase (0..1)
     stridePhase: 0,
     clubId: playerData?.club || 'mca',
+    lastScore: -1,
+    rewardTriggered: false,
   });
 
   // Keep clubId synced without restarting the game loop
@@ -87,10 +89,12 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     }
   }, [gameState]);
 
-  // Particle helper
+  // Particle helper (capped for mobile 60 FPS)
   const createParticles = (x, y, color, count = 8, speedScale = 1) => {
+    const particles = gameRef.current.particles;
+    if (particles.length > 60) return;
     for (let i = 0; i < count; i++) {
-      gameRef.current.particles.push({
+      particles.push({
         x,
         y,
         vx: (Math.random() - 0.5) * 4 * speedScale - 2,
@@ -199,6 +203,8 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     g.player.isDucking = false;
     g.smokeShieldUntil = 0;
     g.magnetUntil = 0;
+    g.lastScore = -1;
+    g.rewardTriggered = false;
     setSmokeActive(false);
     setMagnetActive(false);
     
@@ -269,13 +275,14 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
       // --- 2.5D PARALLAX BACKGROUND LAYERS ---
       
       // Layer 1: Moon & Night Skyline of Algiers (Slowest)
+      ctx.fillStyle = 'rgba(255, 234, 167, 0.14)';
+      ctx.beginPath();
+      ctx.arc(width - 120, 80, 48, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = '#FFEAA7';
-      ctx.shadowColor = 'rgba(255, 234, 167, 0.4)';
-      ctx.shadowBlur = 25;
       ctx.beginPath();
       ctx.arc(width - 120, 80, 32, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
 
       // Distant Port Cranes & Silhouettes (Parallax factor: 0.15)
       ctx.fillStyle = 'rgba(20, 24, 38, 0.6)';
@@ -350,12 +357,16 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
         // Progressive speed curve
         g.speed = 6.5 + Math.min(g.distance / 400, 6.0);
 
-        // Update score
+        // Update score only when integer value changes
         const currentScore = Math.floor(g.distance / 6);
-        setScore(currentScore);
+        if (currentScore !== g.lastScore) {
+          g.lastScore = currentScore;
+          setScore(currentScore);
+        }
 
         // Check 500 pts Reward Milestone!
-        if (currentScore >= 500 && !rewardTriggered) {
+        if (currentScore >= 500 && !g.rewardTriggered) {
+          g.rewardTriggered = true;
           setRewardTriggered(true);
           onRewardUnlocked('YAZEX500', '-10% SUR YAZEX SHIP', 'PIRATE ULTRAS DÉVERROUILLÉ !');
         }
@@ -514,13 +525,11 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
           }
         }
 
-        // Draw animated gold coin
+        // Draw animated gold coin (no shadowBlur for mobile 60 FPS)
         ctx.save();
         ctx.fillStyle = '#FFD700';
         ctx.strokeStyle = '#B7791F';
         ctx.lineWidth = 2;
-        ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
-        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -599,7 +608,7 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
 
     animationId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationId);
-  }, [gameState, rewardTriggered, onRewardUnlocked, setHighScores, setPlayerData]);
+  }, [gameState, onRewardUnlocked, setHighScores, setPlayerData]);
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-24 md:pb-12 px-1 sm:px-0">
@@ -791,6 +800,13 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
                     <Award size={16} /> CODE PROMO
                   </button>
                 )}
+
+                <button
+                  onClick={onBack}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-black/70 hover:bg-white/10 text-gray-200 hover:text-white border border-pirate-gold/40 font-heading text-sm sm:text-base tracking-wider px-5 py-2.5 sm:py-3 rounded-xl transition-all"
+                >
+                  <ArrowLeft size={16} /> QUITTER / LOBBY
+                </button>
               </div>
             </div>
           </div>
