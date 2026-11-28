@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Trophy, Flame, Play, Shield, Coins, Palette, ExternalLink, Home, X, Gift, Award, LogIn, LogOut, Globe, ChevronDown, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { SHOP_URL } from '../utils/arcadeApi';
 
 const LANGUAGES = [
   { code: 'fr', label: 'Français', short: 'FR' },
@@ -311,7 +312,7 @@ export default function Navbar({ currentView, setCurrentView, playerData, setPla
 
             {/* Yazex Ship Official Store Button */}
             <a
-              href="http://localhost:5173"
+              href={SHOP_URL}
               target="_blank"
               rel="noreferrer"
               className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-pirate-gold to-yellow-500 hover:from-yellow-400 hover:to-pirate-gold text-pirate-dark font-heading text-xs tracking-wider font-bold px-3 py-1.5 rounded-xl shadow-gold-glow hover:scale-105 transition-all cursor-pointer shrink-0"
