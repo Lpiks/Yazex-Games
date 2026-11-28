@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Copy, Check, ExternalLink, Award, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { SHOP_URL } from '../utils/arcadeApi';
 
-export default function PromoModal({ isOpen, onClose, promoCode, discountText, title }) {
+export default function PromoModal({ isOpen, onClose, promoCode, discountText, title, club = '' }) {
   const [copied, setCopied] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
     if (isOpen) {
       // Trigger gold & red celebratory confetti
       confetti({
@@ -86,7 +96,7 @@ export default function PromoModal({ isOpen, onClose, promoCode, discountText, t
         {/* Action Button to Yazex Shop */}
         <div className="relative z-10 text-center space-y-3">
           <a
-            href="http://localhost:5173"
+            href={`${SHOP_URL}/checkout?promo=${encodeURIComponent(promoCode || '')}&club=${encodeURIComponent(club || '')}`}
             target="_blank"
             rel="noreferrer"
             className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white font-heading text-lg tracking-wider font-bold py-3.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all uppercase"

@@ -41,3 +41,22 @@
 .animate-pulse-glow {
   animation: pulseGlow 2.5s infinite ease-in-out;
 }
+
+@keyframes pirate-marquee {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-pirate-marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: pirate-marquee 22s linear infinite;
+}
+
+.group:hover .animate-pirate-marquee {
+  animation-play-state: paused;
+}

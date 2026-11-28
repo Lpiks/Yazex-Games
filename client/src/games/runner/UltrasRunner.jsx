@@ -3,13 +3,34 @@ import { Play, RotateCcw, ArrowDown, ArrowUp, Volume2, VolumeX, Award, ArrowLeft
 import confetti from 'canvas-confetti';
 import { drawPirateRunner } from './drawPirateRunner';
 import { drawObstacle } from './drawObstacles';
+import { arcadeFetch } from '../../utils/arcadeApi';
+import { useTranslation } from 'react-i18next';
 
 export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, setHighScores, playerData, setPlayerData, onOpenArmory }) {
+  const { t } = useTranslation();
   const canvasRef = useRef(null);
+  const [weeklyTop, setWeeklyTop] = useState(null);
   const touchStartYRef = useRef(null);
   
   // Game states
   const [gameState, setGameState] = useState('start'); // 'start' | 'playing' | 'gameover'
+
+  useEffect(() => {
+    const fetchWeeklyTop = () => {
+      arcadeFetch('/game/leaderboard')
+        .then((res) => {
+          if (res.success && Array.isArray(res.data?.weekly) && res.data.weekly.length > 0) {
+            setWeeklyTop(res.data.weekly[0]);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchWeeklyTop();
+    if (gameState === 'gameover') {
+      const timer = setTimeout(fetchWeeklyTop, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, highScores.runner]);
   const [score, setScore] = useState(0);
   const [coins, setCoins] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -74,6 +95,7 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     if (g.player.isGrounded && !g.player.isDucking) {
       g.player.velocityY = g.player.jumpForce;
       g.player.isGrounded = false;
+      g.jumpsCount = (g.jumpsCount || 0) + 1;
       createParticles(g.player.x + 20, 330, '#C5A367', 6);
     }
   }, [gameState]);
@@ -82,6 +104,9 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
   const handleDuck = useCallback((isDown) => {
     const g = gameRef.current;
     if (gameState !== 'playing') return;
+    if (isDown && !g.player.isDucking) {
+      g.ducksCount = (g.ducksCount || 0) + 1;
+    }
     g.player.isDucking = isDown;
     setDucking(isDown);
     if (isDown && !g.player.isGrounded) {
@@ -205,8 +230,19 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     g.magnetUntil = 0;
     g.lastScore = -1;
     g.rewardTriggered = false;
+    g.jumpsCount = 0;
+    g.ducksCount = 0;
+    g.runToken = '';
     setSmokeActive(false);
     setMagnetActive(false);
+
+    arcadeFetch('/game/runner/start', { method: 'POST' })
+      .then((res) => {
+        if (res.success && res.data?.runToken) {
+          g.runToken = res.data.runToken;
+        }
+      })
+      .catch(() => {});
     
     setScore(0);
     setCoins(0);
@@ -364,11 +400,10 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
           setScore(currentScore);
         }
 
-        // Check 500 pts Reward Milestone!
+        // Check 500m Daily Target (non-blocking HUD indicator — never interrupt mid-run!)
         if (currentScore >= 500 && !g.rewardTriggered) {
           g.rewardTriggered = true;
           setRewardTriggered(true);
-          onRewardUnlocked('YAZEX500', '-10% SUR YAZEX SHIP', 'PIRATE ULTRAS DÉVERROUILLÉ !');
         }
 
         // --- PLAYER PHYSICS ---
@@ -484,10 +519,18 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
             g.running = false;
             const finalScore = Math.floor(g.distance / 6);
             setGameState('gameover');
-            // Update high score
+            // Update high score + send telemetry & runToken
             setHighScores(prev => {
               const newBest = Math.max(prev.runner || 0, finalScore);
-              return { ...prev, runner: newBest };
+              return {
+                ...prev,
+                runner: newBest,
+                runScore: finalScore,
+                coinsEarned: g.coinsCollected,
+                jumps: g.jumpsCount || 0,
+                ducks: g.ducksCount || 0,
+                runToken: g.runToken || ''
+              };
             });
             // Update player coins
             setPlayerData(prev => ({
@@ -614,27 +657,35 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
     <div className="space-y-4 max-w-5xl mx-auto pb-24 md:pb-12 px-1 sm:px-0">
       
       {/* Top Header & Navigation */}
-      <div className="flex items-center justify-between gap-2 px-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <button
           onClick={onBack}
           className="inline-flex items-center gap-1.5 py-2 pr-2 text-pirate-gold hover:text-white font-heading text-xs sm:text-sm tracking-wider transition-colors"
         >
-          <ArrowLeft size={16} /> LOBBY
+          <ArrowLeft size={16} /> {t('nav.lobby')}
         </button>
 
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
           <button
             onClick={onOpenArmory}
             className="flex items-center gap-1.5 bg-gradient-to-r from-pirate-gold/20 to-yellow-600/20 hover:from-pirate-gold/30 hover:to-yellow-600/30 border border-pirate-gold/50 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-mono text-pirate-gold hover:text-white transition-all shadow-gold-glow"
             title="Ouvrir l'Armurerie du Virage"
           >
             <Flame size={13} className="text-red-500 animate-pulse" />
-            <span className="font-heading tracking-wider">ARMURERIE</span>
+            <span className="font-heading tracking-wider">{t('runner.armory')}</span>
           </button>
 
-          <div className="flex items-center gap-1.5 bg-black/60 border border-pirate-gold/30 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-mono tabular-nums">
+          <div className="flex items-center gap-1.5 bg-black/60 border border-pirate-gold/30 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-mono tabular-nums">
             <Trophy size={13} className="text-yellow-400" />
-            <span>RECORD : <strong>{(highScores.runner || 0).toLocaleString()} PTS</strong></span>
+            <span>{t('runner.my_record')} : <strong>{(highScores.runner || 0).toLocaleString()} PTS</strong></span>
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-red-950/40 border border-red-500/40 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-mono tabular-nums text-red-300">
+            <Flame size={13} className="text-red-400" />
+            <span>
+              {t('runner.weekly_top')} : <strong>{weeklyTop ? `${weeklyTop.weeklyBestScore.toLocaleString()} PTS` : '0 PTS'}</strong>
+              {weeklyTop?.pseudo && <span className="hidden sm:inline text-gray-400 ml-1">(@{weeklyTop.pseudo})</span>}
+            </span>
           </div>
 
           <button
@@ -792,15 +843,6 @@ export default function UltrasRunner({ onBack, onRewardUnlocked, highScores, set
                   <RotateCcw size={16} /> NOUVELLE PARTIE
                 </button>
                 
-                {score >= 500 && (
-                  <button
-                    onClick={() => onRewardUnlocked('YAZEX500', '-10% SUR YAZEX SHIP', 'PIRATE ULTRAS DÉVERROUILLÉ !')}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-heading text-sm sm:text-lg tracking-wider px-5 py-3 sm:px-6 rounded-xl shadow-gold-glow font-bold uppercase transition-all"
-                  >
-                    <Award size={16} /> CODE PROMO
-                  </button>
-                )}
-
                 <button
                   onClick={onBack}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-black/70 hover:bg-white/10 text-gray-200 hover:text-white border border-pirate-gold/40 font-heading text-sm sm:text-base tracking-wider px-5 py-2.5 sm:py-3 rounded-xl transition-all"

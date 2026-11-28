@@ -2,53 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Upload, Palette, Layers, Film, RotateCcw, Send, Check, ArrowLeft, Sliders, Type, Flame, ShoppingCart, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { TIFO_PYRO_PACKS } from '../../components/ArmoryModal';
-
-export const PYRO_CONFIGS = {
-  red: {
-    name: 'Rouge Braise Alger',
-    spots: [{ x: 100, y: 360 }, { x: 220, y: 370 }, { x: 780, y: 370 }, { x: 900, y: 360 }],
-    colors: ['rgba(255, 69, 0, 0.85)', 'rgba(229, 62, 62, 0.45)'],
-    sparkColors: ['#FFEAA7', '#FF7675', '#FDCB6E'],
-    sparkCount: 6,
-    sparkHeight: 80
-  },
-  green: {
-    name: 'Vert Émeraude MCA',
-    spots: [{ x: 100, y: 360 }, { x: 220, y: 370 }, { x: 780, y: 370 }, { x: 900, y: 360 }],
-    colors: ['rgba(46, 204, 113, 0.85)', 'rgba(39, 174, 96, 0.45)'],
-    sparkColors: ['#A8E6CF', '#55EFC4', '#FFFFFF'],
-    sparkCount: 6,
-    sparkHeight: 85
-  },
-  gold: {
-    name: 'Or Corsaire Yazex',
-    spots: [{ x: 100, y: 360 }, { x: 220, y: 370 }, { x: 780, y: 370 }, { x: 900, y: 360 }],
-    colors: ['rgba(255, 215, 0, 0.9)', 'rgba(217, 119, 6, 0.5)'],
-    sparkColors: ['#FFFBEB', '#FDE047', '#F59E0B'],
-    sparkCount: 8,
-    sparkHeight: 90
-  },
-  black: {
-    name: 'Fumée Noire Toxique',
-    spots: [{ x: 100, y: 360 }, { x: 220, y: 370 }, { x: 780, y: 370 }, { x: 900, y: 360 }],
-    colors: ['rgba(20, 20, 22, 0.95)', 'rgba(55, 65, 81, 0.65)'],
-    sparkColors: ['#E2E8F0', '#94A3B8', '#F1F5F9'],
-    sparkCount: 5,
-    sparkHeight: 95
-  },
-  dual: {
-    name: 'Grand Brasier (12 Foyers)',
-    spots: [
-      { x: 80, y: 365 }, { x: 160, y: 368 }, { x: 240, y: 370 }, { x: 320, y: 372 },
-      { x: 400, y: 375 }, { x: 480, y: 375 }, { x: 520, y: 375 }, { x: 600, y: 372 },
-      { x: 680, y: 370 }, { x: 760, y: 368 }, { x: 840, y: 365 }, { x: 920, y: 365 }
-    ],
-    colors: ['rgba(255, 69, 0, 0.9)', 'rgba(245, 158, 11, 0.5)'],
-    sparkColors: ['#FEF08A', '#F97316', '#EF4444', '#FFFFFF'],
-    sparkCount: 10,
-    sparkHeight: 110
-  }
-};
+import { PYRO_CONFIGS, getCoveredColumnsForConfig, makeDefaultGrid, renderTifoFrame } from './renderTifoFrame';
 
 const TIFO_TYPES = [
   { id: 'chore', name: '1. Chorégraphie', desc: 'Mosaïque de feuilles & cartons colorés levés par la tribune', icon: '🟥🟩' },
@@ -107,7 +61,7 @@ const PIXEL_FONT = {
   ' ': [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
 };
 
-export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', playerData, setPlayerData, onOpenArmory }) {
+export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', playerData, setPlayerData, onOpenArmory, activeChallenge }) {
   const canvasRef = useRef(null);
 
   // Studio configuration states
@@ -126,11 +80,43 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
   // Capo Text Stamper & Drag-to-paint
   const [capoText, setCapoText] = useState('MCA');
   const [isPainting, setIsPainting] = useState(false);
+  const [isPlacingText, setIsPlacingText] = useState(false);
 
   // Simulation playback state
   const [isPlaying, setIsPlaying] = useState(false);
   const [simTime, setSimTime] = useState(0); // 0 to 15 seconds
   const [submitted, setSubmitted] = useState(false);
+
+  // Interactive Pyro Placement
+  const [isPlacingPyro, setIsPlacingPyro] = useState(false);
+  const [customPyroSpots, setCustomPyroSpots] = useState(null);
+
+  const activeEffectId = playerData?.inventory?.activePyro || 'red';
+  const activePyroCfg = PYRO_CONFIGS[activeEffectId] || PYRO_CONFIGS.red;
+  const maxPyroSpots = activePyroCfg.spots.length;
+  const effectivePyroSpots = customPyroSpots ?? activePyroCfg.spots;
+
+  const handleCanvasPyroClick = (e) => {
+    if (!isPlacingPyro || isPlaying) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = Math.max(65, Math.min(935, Math.round((e.clientX - rect.left) * scaleX)));
+    const cy = Math.max(95, Math.min(385, Math.round((e.clientY - rect.top) * scaleY)));
+
+    const current = customPyroSpots ?? [...activePyroCfg.spots];
+    const hitIdx = current.findIndex((s) => Math.hypot(s.x - cx, s.y - cy) < 28);
+    if (hitIdx !== -1) {
+      setCustomPyroSpots(current.filter((_, idx) => idx !== hitIdx));
+    } else if (current.length < maxPyroSpots) {
+      setCustomPyroSpots([...current, { x: cx, y: cy }]);
+    } else {
+      // Replace oldest spot when at cap so user can keep placing freely
+      setCustomPyroSpots([...current.slice(1), { x: cx, y: cy }]);
+    }
+  };
 
   // Choreography Grid: 24 columns x 10 rows
   const [grid, setGrid] = useState(() => {
@@ -203,30 +189,45 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
     });
   };
 
-  // Stamp Capo Text (Centered in available stand columns)
-  const stampCapoText = () => {
+  // Stamp Capo Text (Click-to-place anywhere or auto-center in largest contiguous exposed block)
+  const stampCapoText = (targetRow = null, targetCol = null) => {
     const text = capoText.trim().toUpperCase().slice(0, 5);
     if (!text) return;
 
     const covered = getCoveredColumns();
-    // Find contiguous exposed columns
-    const exposed = [];
-    for (let c = 0; c < 24; c++) {
-      if (!covered.has(c)) exposed.push(c);
-    }
-    if (exposed.length < 5) return;
-
-    // Total width of text: 3 cols per char + 1 col gap between chars
     const charWidth = 3;
     const gap = 1;
     const totalTextWidth = text.length * charWidth + (text.length - 1) * gap;
 
-    // Find center in the largest contiguous block of exposed columns
-    const minC = exposed[0];
-    const maxC = exposed[exposed.length - 1];
-    const blockCenter = Math.floor((minC + maxC) / 2);
-    const startCol = Math.max(minC, Math.floor(blockCenter - totalTextWidth / 2));
-    const startRow = 2; // Vertical center on rows 2..6
+    let startCol;
+    let startRow;
+
+    if (targetRow !== null && targetCol !== null) {
+      // Place centered on the clicked cell, clamped to grid bounds
+      startCol = Math.max(0, Math.min(24 - totalTextWidth, Math.floor(targetCol - totalTextWidth / 2)));
+      startRow = Math.max(0, Math.min(5, targetRow - 2));
+    } else {
+      // Find largest contiguous block of exposed columns
+      const blocks = [];
+      let cur = [];
+      for (let c = 0; c < 24; c++) {
+        if (!covered.has(c)) {
+          cur.push(c);
+        } else if (cur.length > 0) {
+          blocks.push(cur);
+          cur = [];
+        }
+      }
+      if (cur.length > 0) blocks.push(cur);
+      if (blocks.length === 0) return;
+
+      const bestBlock = blocks.reduce((a, b) => (b.length > a.length ? b : a), blocks[0]);
+      const minC = bestBlock[0];
+      const maxC = bestBlock[bestBlock.length - 1];
+      const blockCenter = Math.floor((minC + maxC) / 2);
+      startCol = Math.max(minC, Math.floor(blockCenter - totalTextWidth / 2));
+      startRow = 2;
+    }
 
     setGrid(prev => {
       const next = prev.map(row => [...row]);
@@ -236,11 +237,11 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
         const glyph = PIXEL_FONT[ch] || PIXEL_FONT[' '];
         for (let gr = 0; gr < 5; gr++) {
           for (let gc = 0; gc < 3; gc++) {
-            const targetR = startRow + gr;
-            const targetC = currentCol + gc;
-            if (targetR < 10 && targetC < 24 && !covered.has(targetC)) {
+            const r = startRow + gr;
+            const c = currentCol + gc;
+            if (r >= 0 && r < 10 && c >= 0 && c < 24 && !covered.has(c)) {
               if (glyph[gr][gc] === 1) {
-                next[targetR][targetC] = selectedColor;
+                next[r][c] = selectedColor;
               }
             }
           }
@@ -249,6 +250,8 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
       }
       return next;
     });
+
+    setIsPlacingText(false);
   };
 
   // Custom image upload handler
@@ -289,266 +292,82 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
     return () => clearInterval(interval);
   }, [isPlaying]);
 
-  // Canvas 2.5D Stadium Renderer
+  // Canvas 2.5D Stadium Renderer (delegated to shared renderTifoFrame)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    renderTifoFrame(ctx, canvas.width, canvas.height, {
+      tifoType,
+      grid,
+      voileCount,
+      voileLayout,
+      voileScale,
+      voileImage,
+      voileImage2,
+      object3dImage,
+      pyro: activeEffectId,
+      pyroSpots: effectivePyroSpots,
+    }, {
+      isPlaying,
+      simTime,
+      isPlacingPyro,
+    });
+  }, [tifoType, grid, voileCount, voileLayout, voileScale, voileImage, voileImage2, object3dImage, isPlaying, simTime, isPlacingPyro, activeEffectId, effectivePyroSpots]);
 
-    // Clear background: Night Stadium Atmosphere
-    ctx.fillStyle = '#0a0b10';
-    ctx.fillRect(0, 0, width, height);
+  const CLUB_BADGES = {
+    mca: '🟢🔴 MC Alger',
+    usma: '🔴⚫ USM Alger',
+    crb: '🔴⚪ CR Belouizdad',
+    jsk: '🟡🟢 JS Kabylie',
+    ess: '⚫⚪ ES Sétif',
+    csc: '🟢⚫ CS Constantine',
+    mco: '🔴⚪ MC Oran',
+  };
 
-    // Stadium Floodlights (Top beams)
-    const beamGrad = ctx.createLinearGradient(0, 0, 0, height);
-    beamGrad.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
-    beamGrad.addColorStop(0.5, 'rgba(197, 163, 103, 0.08)');
-    beamGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = beamGrad;
-    ctx.fillRect(0, 0, width, height);
-
-    // Light poles
-    ctx.fillStyle = '#FFEAA7';
-    ctx.shadowColor = '#FFEAA7';
-    ctx.shadowBlur = 20;
-    ctx.beginPath();
-    ctx.arc(80, 40, 16, 0, Math.PI * 2);
-    ctx.arc(width - 80, 40, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Tribune Concrete Structure (Tiered Curve)
-    const standX = 60;
-    const standWidth = width - 120;
-    ctx.fillStyle = '#181920';
-    ctx.fillRect(standX, 90, standWidth, 310);
-    ctx.strokeStyle = '#C5A367';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(standX, 90, standWidth, 310);
-
-    // 1. RENDER CHOREOGRAPHY LAYER (Feuilles)
-    const showChore = (tifoType === 'chore' || tifoType === 'mixte');
-    let choreoLift = !isPlaying ? 1 : Math.min(Math.max((simTime - 2) / 2, 0), 1);
-    const coveredCols = getCoveredColumns();
-
-    if (showChore) {
-      const cellW = (width - 160) / 24;
-      const cellH = 22;
-      for (let r = 0; r < 10; r++) {
-        for (let c = 0; c < 24; c++) {
-          if (coveredCols.has(c)) continue; // Hidden beneath the voile!
-
-          const x = 80 + c * cellW;
-          const y = 110 + r * 28;
-
-          ctx.fillStyle = grid[r][c];
-          ctx.globalAlpha = choreoLift;
-          ctx.fillRect(x + 1, y, cellW - 2, cellH);
-
-          // Supporter silhouette behind sheet
-          ctx.fillStyle = '#333';
-          ctx.beginPath();
-          ctx.arc(x + cellW / 2, y + 2, 4, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.globalAlpha = 1.0;
-        }
-      }
-    }
-
-    // 2. RENDER VOILE LAYER (قماش Monumental: 1 ou 2 Voiles)
-    const showVoile = (tifoType === 'voile' || tifoType === 'mixte');
-    if (showVoile) {
-      let voileProgress = !isPlaying ? 1 : Math.min(simTime / 4, 1);
-      const voilesToDraw = [];
-
-      if (voileCount === 1) {
-        if (voileLayout === 'full') {
-          voilesToDraw.push({ x: standX + 10, w: standWidth - 20, imgSrc: voileImage });
-        } else if (voileLayout === 'left') {
-          voilesToDraw.push({ x: standX + 15, w: standWidth * 0.48, imgSrc: voileImage });
-        } else if (voileLayout === 'right') {
-          const w = standWidth * 0.48;
-          voilesToDraw.push({ x: standX + standWidth - w - 15, w: w, imgSrc: voileImage });
-        } else { // center
-          const factor = voileScale === 'large' ? 0.70 : voileScale === 'compact' ? 0.35 : 0.52;
-          const w = standWidth * factor;
-          voilesToDraw.push({ x: width / 2 - w / 2, w: w, imgSrc: voileImage });
-        }
-      } else { // 2 Voiles
-        if (voileLayout === 'dual-wings') {
-          const w = standWidth * 0.31;
-          voilesToDraw.push({ x: standX + 15, w: w, imgSrc: voileImage });
-          voilesToDraw.push({ x: standX + standWidth - w - 15, w: w, imgSrc: voileImage2 });
-        } else { // dual-center
-          const gap = 16;
-          const totalW = standWidth * 0.60;
-          const w = (totalW - gap) / 2;
-          const startX = width / 2 - totalW / 2;
-          voilesToDraw.push({ x: startX, w: w, imgSrc: voileImage });
-          voilesToDraw.push({ x: startX + w + gap, w: w, imgSrc: voileImage2 });
-        }
-      }
-
-      // Draw each voile onto the stand
-      voilesToDraw.forEach((v) => {
-        const voileHeight = 260 * voileProgress;
-        const voileY = 380 - voileHeight;
-
-        if (voileHeight > 5) {
-          ctx.save();
-          // Drop Shadow
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-          ctx.shadowBlur = 25;
-
-          // Bâche Background with cloth texture tint
-          ctx.fillStyle = '#1c1b18';
-          ctx.fillRect(v.x, voileY, v.w, voileHeight);
-
-          // Clip to draw uploaded image onto the cloth
-          ctx.beginPath();
-          ctx.rect(v.x, voileY, v.w, voileHeight);
-          ctx.clip();
-
-          const img = new Image();
-          img.src = v.imgSrc;
-          if (img.complete && img.naturalWidth > 0) {
-            ctx.drawImage(img, v.x + 10, voileY + 10, v.w - 20, (260 - 20));
-          }
-
-          // Fabric vertical folds simulation (Realistic creases)
-          for (let f = v.x; f < v.x + v.w; f += 22) {
-            ctx.fillStyle = 'rgba(0,0,0,0.18)';
-            ctx.fillRect(f, voileY, 6, voileHeight);
-            ctx.fillStyle = 'rgba(255,255,255,0.06)';
-            ctx.fillRect(f + 6, voileY, 6, voileHeight);
-          }
-
-          // Bâche Border Ropes & Golden Trim
-          ctx.strokeStyle = '#C5A367';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(v.x, voileY, v.w, voileHeight);
-
-          ctx.restore();
-
-          // Traction cables connected to the roof
-          ctx.strokeStyle = 'rgba(200, 200, 200, 0.65)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(v.x + 15, 90);
-          ctx.lineTo(v.x + 15, voileY);
-          ctx.moveTo(v.x + v.w - 15, 90);
-          ctx.lineTo(v.x + v.w - 15, voileY);
-          ctx.stroke();
-        }
-      });
-    }
-
-    // 3. RENDER 3D MOBILE / FLOATING OBJECT LAYER
-    const show3d = (tifoType === '3d');
-    if (show3d) {
-      let objectProgress = !isPlaying ? 1 : Math.min(Math.max((simTime - 1) / 4, 0), 1);
-      const objSize = 160;
-      const objX = width / 2 - objSize / 2;
-      const objY = 380 - (240 * objectProgress);
-
-      if (objectProgress > 0) {
-        ctx.save();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-        ctx.shadowBlur = 35;
-        ctx.shadowOffsetY = 20;
-
-        const objImg = new Image();
-        objImg.src = object3dImage;
-        if (objImg.complete && objImg.naturalWidth > 0) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(objX + objSize / 2, objY + objSize / 2, objSize / 2, 0, Math.PI * 2);
-          ctx.clip();
-          ctx.drawImage(objImg, objX, objY, objSize, objSize);
-          ctx.restore();
-
-          ctx.strokeStyle = '#FFD700';
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.arc(objX + objSize / 2, objY + objSize / 2, objSize / 2 + 2, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-
-        ctx.restore();
-
-        // 3D Suspension Rig Cables
-        ctx.strokeStyle = '#ECC94B';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(objX, 80);
-        ctx.lineTo(objX + 20, objY);
-        ctx.moveTo(objX + objSize, 80);
-        ctx.lineTo(objX + objSize - 20, objY);
-        ctx.stroke();
-      }
-    }
-
-    // 4. PYROTECHNICS & FUMIGÈNES (Craquage at t >= 7s)
-    if (isPlaying && simTime >= 7) {
-      const pyroIntensity = Math.min((simTime - 7) / 2, 1);
-      const activeEffectId = playerData?.inventory?.activePyro || 'red';
-      const pyroCfg = PYRO_CONFIGS[activeEffectId] || PYRO_CONFIGS.red;
-
-      pyroCfg.spots.forEach((spot) => {
-        const glow = ctx.createRadialGradient(spot.x, spot.y, 5, spot.x, spot.y, 90 * pyroIntensity);
-        glow.addColorStop(0, pyroCfg.colors[0]);
-        glow.addColorStop(0.5, pyroCfg.colors[1]);
-        glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(spot.x, spot.y, 90 * pyroIntensity, 0, Math.PI * 2);
-        ctx.fill();
-
-        for (let s = 0; s < pyroCfg.sparkCount; s++) {
-          const sparkColor = pyroCfg.sparkColors[s % pyroCfg.sparkColors.length];
-          ctx.fillStyle = sparkColor;
-          ctx.beginPath();
-          ctx.arc(
-            spot.x + (Math.random() - 0.5) * 45,
-            spot.y - Math.random() * pyroCfg.sparkHeight * pyroIntensity,
-            Math.random() * 3 + 1,
-            0,
-            Math.PI * 2
-          );
-          ctx.fill();
-        }
-      });
-    }
-
-    // Pitch Grass (Bottom strip)
-    const grassGrad = ctx.createLinearGradient(0, 390, 0, height);
-    grassGrad.addColorStop(0, '#1c4d25');
-    grassGrad.addColorStop(1, '#0e2b14');
-    ctx.fillStyle = grassGrad;
-    ctx.fillRect(0, 390, width, height - 390);
-
-    // Pitch touchline
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(40, 410, width - 80, 40);
-
-  }, [tifoType, grid, voileCount, voileLayout, voileScale, voileImage, voileImage2, object3dImage, isPlaying, simTime, getCoveredColumns, playerData]);
-
-  const handleSubmit = () => {
+  const handleSubmit = (mode = 'submit') => {
+    if (mode === 'submit' && !activeChallenge?.isActive) return;
     setSubmitted(true);
+    if (isPlacingPyro) setIsPlacingPyro(false);
+
+    let snapshot = voileImage;
+    try {
+      if (canvasRef.current) {
+        snapshot = canvasRef.current.toDataURL('image/jpeg', 0.85);
+      }
+    } catch {
+      // Fallback to voileImage if canvas is tainted
+    }
+
+    const activeClub = playerData?.club || initialClub || 'mca';
+    const typeLabel = TIFO_TYPES.find((t) => t.id === tifoType)?.name || tifoType;
+
     onTifoSubmit({
       id: Date.now(),
-      title: tifoTitle,
+      title: tifoTitle.trim() || 'TIFO DU VIRAGE',
       type: tifoType,
-      pyro: playerData?.inventory?.activePyro || 'red',
-      author: 'Capo_Alger',
-      club: initialClub,
+      pyro: activeEffectId,
+      pyroSpots: effectivePyroSpots,
+      author: playerData?.name || 'Capo_Alger',
+      club: activeClub,
+      badge: CLUB_BADGES[activeClub] || '🏴‍☠️ Virage DZ',
       votes: 1,
       createdAt: 'À l\'instant',
-      previewImg: voileImage
-    });
+      previewImg: snapshot,
+      description: `${typeLabel} • ${effectivePyroSpots.length} foyers (${activePyroCfg.name}).`,
+      config: {
+        tifoType,
+        grid,
+        voileCount,
+        voileLayout,
+        voileScale,
+        voileImage,
+        voileImage2,
+        object3dImage,
+        pyro: activeEffectId,
+        pyroSpots: effectivePyroSpots,
+      }
+    }, mode);
     confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
     setTimeout(() => setSubmitted(false), 3000);
   };
@@ -567,26 +386,38 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
           <ArrowLeft size={16} /> RETOUR AU LOBBY
         </button>
 
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <input
             type="text"
             value={tifoTitle}
             onChange={(e) => setTifoTitle(e.target.value)}
             placeholder="Nom de ton Tifo..."
-            className="flex-1 min-w-0 sm:flex-none sm:w-64 bg-black/60 border border-pirate-gold/40 text-pirate-paper font-heading text-xs sm:text-sm px-3 py-2 rounded-xl focus:outline-none focus:border-pirate-gold"
+            className="flex-1 min-w-0 sm:flex-none sm:w-56 bg-black/60 border border-pirate-gold/40 text-pirate-paper font-heading text-xs sm:text-sm px-3 py-2 rounded-xl focus:outline-none focus:border-pirate-gold"
           />
 
           <button
-            onClick={handleSubmit}
+            onClick={() => handleSubmit('draft')}
             disabled={submitted}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-heading text-xs sm:text-sm tracking-wider font-bold bg-black/70 border border-pirate-gold/50 text-pirate-gold hover:bg-pirate-gold/15 transition-all"
+          >
+            {submitted ? <Check size={16} /> : <Send size={16} />}
+            {submitted ? 'SAUVEGARDÉ !' : 'MES TIFOS (BROUILLON)'}
+          </button>
+
+          <button
+            onClick={() => handleSubmit('submit')}
+            disabled={submitted || !activeChallenge?.isActive}
+            title={!activeChallenge?.isActive ? 'Aucun concours actif — sauvegarde en brouillon' : 'Soumettre au concours actif'}
             className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl font-heading text-xs sm:text-sm tracking-wider font-bold shadow-gold-glow transition-all ${
-              submitted 
-                ? 'bg-green-600 text-white' 
-                : 'bg-yellow-500 hover:bg-yellow-400 text-black'
+              !activeChallenge?.isActive
+                ? 'bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed'
+                : submitted
+                  ? 'bg-green-600 text-white'
+                  : 'bg-yellow-500 hover:bg-yellow-400 text-black'
             }`}
           >
             {submitted ? <Check size={16} /> : <Send size={16} />}
-            {submitted ? 'SOUMIS !' : 'SOUMETTRE AU VOTE'}
+            {!activeChallenge?.isActive ? 'CONCOURS FERMÉ' : submitted ? 'SOUMIS !' : 'SOUMETTRE AU VOTE'}
           </button>
         </div>
       </div>
@@ -648,8 +479,21 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
           ref={canvasRef}
           width={1000}
           height={480}
-          className="w-full h-auto aspect-[1000/480] block"
+          onClick={handleCanvasPyroClick}
+          className={`w-full h-auto aspect-[1000/480] block ${isPlacingPyro && !isPlaying ? 'cursor-crosshair' : ''}`}
         />
+
+        {isPlacingPyro && !isPlaying && (
+          <div className="bg-red-950/80 border-t border-red-500/40 px-3 py-1.5 flex items-center justify-between text-[11px] font-mono text-red-200">
+            <span>🔥 Touche la tribune pour placer/retirer tes fumigènes ({effectivePyroSpots.length}/{maxPyroSpots})</span>
+            <button
+              onClick={() => setIsPlacingPyro(false)}
+              className="text-yellow-400 hover:text-white font-bold underline shrink-0 ml-2"
+            >
+              Terminer
+            </button>
+          </div>
+        )}
 
         {/* Live Timeline Scrubber */}
         <div className="h-2 bg-gray-900 w-full relative">
@@ -773,6 +617,36 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
                   </button>
                 );
               })}
+            </div>
+
+            {/* Interactive Pyro Spot Placement Controls */}
+            <div className="pt-2 border-t border-pirate-gold/15 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-mono text-gray-400">
+                <span>Positions sur tribune</span>
+                <span className="text-pirate-gold font-bold tabular-nums">{effectivePyroSpots.length}/{maxPyroSpots} foyers</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsPlacingPyro((v) => !v)}
+                  disabled={isPlaying}
+                  className={`flex-1 py-2 px-3 rounded-xl font-heading text-xs tracking-wider font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    isPlacingPyro
+                      ? 'bg-red-600 text-white shadow-fumi-glow border border-yellow-400'
+                      : 'bg-black/60 hover:bg-red-950/60 text-red-300 border border-red-500/40'
+                  }`}
+                >
+                  <Flame size={13} />
+                  {isPlacingPyro ? 'PLACEMENT ACTIF' : 'PLACER SUR TRIBUNE'}
+                </button>
+                <button
+                  onClick={() => setCustomPyroSpots(null)}
+                  disabled={isPlaying || customPyroSpots === null}
+                  className="px-2.5 py-2 rounded-xl bg-black/60 border border-gray-700 text-gray-300 hover:text-white disabled:opacity-40 text-[11px] font-mono"
+                  title="Revenir aux positions par défaut"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -966,7 +840,7 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
 
               {/* Capo Ultras Text Stamper */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-black/40 p-2.5 rounded-xl border border-pirate-gold/20">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Type size={16} className="text-yellow-400 shrink-0" />
                   <span className="text-xs font-mono text-gray-300">Écrire en tribune :</span>
                   <input
@@ -978,10 +852,21 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
                     className="bg-black border border-pirate-gold/40 text-pirate-gold font-heading text-sm px-2.5 py-1 rounded-lg uppercase w-20 text-center tracking-widest focus:outline-none focus:border-pirate-gold"
                   />
                   <button
-                    onClick={stampCapoText}
-                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-heading text-xs tracking-wider px-3 py-1.5 rounded-lg font-bold shadow-md transition-all active:scale-95"
+                    onClick={() => setIsPlacingText((v) => !v)}
+                    className={`font-heading text-xs tracking-wider px-3 py-1.5 rounded-lg font-bold shadow-md transition-all active:scale-95 ${
+                      isPlacingText
+                        ? 'bg-red-600 text-white border border-yellow-400 shadow-fumi-glow'
+                        : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black'
+                    }`}
                   >
-                    POSER LE TEXTE
+                    {isPlacingText ? 'CHOISIR CASE...' : 'POSER SUR GRILLE'}
+                  </button>
+                  <button
+                    onClick={() => stampCapoText(null, null)}
+                    className="bg-black/60 hover:bg-white/10 text-gray-300 hover:text-white border border-pirate-gold/30 font-mono text-[11px] px-2.5 py-1.5 rounded-lg transition-colors"
+                    title="Centrer automatiquement dans une zone libre"
+                  >
+                    Centrer auto
                   </button>
                 </div>
 
@@ -1014,9 +899,18 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
                 <span>AILE DROITE ▶</span>
               </div>
 
+              {isPlacingText && (
+                <div className="bg-yellow-500/15 border border-yellow-400/50 rounded-lg px-3 py-1.5 flex items-center justify-between text-[11px] font-mono text-yellow-200">
+                  <span>✍️ Touche une case libre de la grille pour poser « {capoText || 'MCA'} »</span>
+                  <button onClick={() => setIsPlacingText(false)} className="text-gray-300 hover:text-white underline ml-2 shrink-0">
+                    Annuler
+                  </button>
+                </div>
+              )}
+
               {/* COMPACT PIXEL GRID (130px max, 24 cols CSS) */}
               <div 
-                className="bg-black/90 p-2 sm:p-3 rounded-xl border border-pirate-gold/40 shadow-inner select-none overflow-hidden"
+                className={`bg-black/90 p-2 sm:p-3 rounded-xl border border-pirate-gold/40 shadow-inner select-none overflow-hidden ${isPlacingText ? 'cursor-crosshair ring-1 ring-yellow-400/60' : ''}`}
                 onPointerLeave={() => setIsPainting(false)}
                 onPointerUp={() => setIsPainting(false)}
               >
@@ -1036,6 +930,10 @@ export default function TifoStudio({ onBack, onTifoSubmit, initialClub = 'mca', 
                           key={`${r}-${c}`}
                           onPointerDown={(e) => {
                             e.preventDefault();
+                            if (isPlacingText) {
+                              stampCapoText(r, c);
+                              return;
+                            }
                             setIsPainting(true);
                             paintCell(r, c);
                           }}
